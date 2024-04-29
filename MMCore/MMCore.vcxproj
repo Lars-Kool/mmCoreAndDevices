@@ -88,6 +88,7 @@
     <ClCompile Include="Devices\HubInstance.cpp" />
     <ClCompile Include="Devices\ImageProcessorInstance.cpp" />
     <ClCompile Include="Devices\MagnifierInstance.cpp" />
+    <ClCompile Include="Devices\PumpInstance.cpp" />
     <ClCompile Include="Devices\SerialInstance.cpp" />
     <ClCompile Include="Devices\ShutterInstance.cpp" />
     <ClCompile Include="Devices\SignalIOInstance.cpp" />
@@ -131,6 +132,7 @@
     <ClInclude Include="Devices\HubInstance.h" />
     <ClInclude Include="Devices\ImageProcessorInstance.h" />
     <ClInclude Include="Devices\MagnifierInstance.h" />
+    <ClInclude Include="Devices\PumpInstance.h" />
     <ClInclude Include="Devices\SerialInstance.h" />
     <ClInclude Include="Devices\ShutterInstance.h" />
     <ClInclude Include="Devices\SignalIOInstance.h" />

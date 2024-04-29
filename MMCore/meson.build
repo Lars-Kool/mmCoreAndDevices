@@ -51,6 +51,7 @@ mmcore_sources = files(
     'Devices/HubInstance.cpp',
     'Devices/ImageProcessorInstance.cpp',
     'Devices/MagnifierInstance.cpp',
+    'Devices/PumpInstance.cpp',
     'Devices/SerialInstance.cpp',
     'Devices/ShutterInstance.cpp',
     'Devices/SignalIOInstance.cpp',

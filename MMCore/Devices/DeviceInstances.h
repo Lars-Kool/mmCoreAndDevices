@@ -30,6 +30,7 @@
 #include "ImageProcessorInstance.h"
 #include "SignalIOInstance.h"
 #include "MagnifierInstance.h"
+#include "PumpInstance.h"
 #include "SLMInstance.h"
 #include "GalvoInstance.h"
 #include "HubInstance.h"
