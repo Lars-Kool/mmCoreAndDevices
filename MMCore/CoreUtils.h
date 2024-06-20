@@ -72,7 +72,8 @@ inline std::string ToString(const MM::DeviceType d)
       case MM::SLMDevice: return "SLM";
       case MM::HubDevice: return "Hub";
       case MM::GalvoDevice: return "Galvo";
-      case MM::PumpDevice: return "Pump";
+      case MM::VolumetricPumpDevice: return "VolumetricPump";
+      case MM::PressurePumpDevice: return "PressurePump";
    }
    return "Invalid";
 }

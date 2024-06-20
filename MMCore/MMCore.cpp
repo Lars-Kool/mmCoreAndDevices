@@ -3229,11 +3229,24 @@ std::string CMMCore::getAutoFocusDevice()
 }
 
 /**
- * Returns the label of the currently selected pump device.
+ * Returns the label of the currently selected pressure pump device.
  */
-std::string CMMCore::getPumpDevice()
+std::string CMMCore::getPressurePumpDevice()
 {
-    std::shared_ptr<PumpInstance> camera = currentPumpDevice_.lock();
+    std::shared_ptr<PressurePumpInstance> camera = currentPressurePumpDevice_.lock();
+    if (camera)
+    {
+        return camera->GetLabel();
+    }
+    return std::string();
+}
+
+/**
+ * Returns the label of the currently selected volumetric pump device.
+ */
+std::string CMMCore::getVolumetricPumpDevice()
+{
+    std::shared_ptr<VolumetricPumpInstance> camera = currentVolumetricPumpDevice_.lock();
     if (camera)
     {
         return camera->GetLabel();
@@ -6227,35 +6240,35 @@ std::string CMMCore::getGalvoChannel(const char* deviceLabel) throw (CMMError)
    return pGalvo->GetChannel();
 }
 
-/* Pump device */
+/* Volumetric Pump device */
 
 /**
  * Sets the current pump device.
  * @param pump    the shutter device label
  */
-void CMMCore::setPumpDevice(const char* deviceLabel) throw (CMMError)
+void CMMCore::setVolumetricPumpDevice(const char* deviceLabel) throw (CMMError)
 {
     if (!deviceLabel || strlen(deviceLabel) > 0) // Allow empty label
         CheckDeviceLabel(deviceLabel);
 
     // Nothing to do if this is the current shutter device:
-    if (getPumpDevice().compare(deviceLabel) == 0)
+    if (getVolumetricPumpDevice().compare(deviceLabel) == 0)
         return;
 
     if (strlen(deviceLabel) > 0)
     {
-        currentPumpDevice_ =
-            deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+        currentVolumetricPumpDevice_ =
+            deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
 
         LOG_INFO(coreLogger_) << "Default shutter set to " << deviceLabel;
     }
     else
     {
-        currentPumpDevice_.reset();
+        currentVolumetricPumpDevice_.reset();
         LOG_INFO(coreLogger_) << "Default pump unset";
     }
     properties_->Refresh(); // TODO: more efficient
-    std::string newPumpLabel = getPumpDevice();
+    std::string newPumpLabel = getVolumetricPumpDevice();
     {
         MMThreadGuard scg(stateCacheLock_);
         stateCache_.addSetting(PropertySetting(MM::g_Keyword_CoreDevice, MM::g_Keyword_CorePump, newPumpLabel.c_str()));
@@ -6263,30 +6276,12 @@ void CMMCore::setPumpDevice(const char* deviceLabel) throw (CMMError)
 }
 
 /**
-* Homes the pump
+* Stops the volumetric pump
 */
-void CMMCore::PumpHome(const char* deviceLabel) throw (CMMError)
+void CMMCore::VolumetricPumpStop(const char* deviceLabel) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump = 
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
-    mm::DeviceModuleLockGuard guard(pPump);
-    
-    int ret = pPump->Home();
-
-    if (ret != DEVICE_OK)
-    {
-        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
-        throw CMMError(getDeviceErrorText(ret, pPump));
-    }
-}
-
-/**
-* Stops the pump
-*/
-void CMMCore::PumpStop(const char* deviceLabel) throw (CMMError)
-{
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->Stop();
@@ -6299,12 +6294,39 @@ void CMMCore::PumpStop(const char* deviceLabel) throw (CMMError)
 }
 
 /**
+* Homes the pump
+*/
+void CMMCore::VolumetricPumpHome(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+    
+    int ret = pPump->Home();
+
+    if (ret != DEVICE_OK)
+    {
+        logError(deviceLabel, getDeviceErrorText(ret, pPump).c_str());
+        throw CMMError(getDeviceErrorText(ret, pPump));
+    }
+}
+
+bool CMMCore::VolumetricPumpRequiresHoming(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    return pPump->requiresHoming();
+}
+
+/**
 * Sets whether the pump direction needs to be inverted
 */
 void CMMCore::invertPumpDirection(const char* deviceLabel, bool invert) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->invertDirection(invert);
@@ -6321,8 +6343,8 @@ void CMMCore::invertPumpDirection(const char* deviceLabel, bool invert) throw (C
 */
 bool CMMCore::isPumpDirectionInverted(const char* deviceLabel) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     bool invert = false;
@@ -6342,8 +6364,8 @@ bool CMMCore::isPumpDirectionInverted(const char* deviceLabel) throw (CMMError)
 */
 void CMMCore::setPumpVolume(const char* deviceLabel, double volUl) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->setVolumeUl(volUl);
@@ -6360,8 +6382,8 @@ void CMMCore::setPumpVolume(const char* deviceLabel, double volUl) throw (CMMErr
 */
 double CMMCore::getPumpVolume(const char* deviceLabel) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     double volUl = 0;
@@ -6380,8 +6402,8 @@ double CMMCore::getPumpVolume(const char* deviceLabel) throw (CMMError)
 */
 void CMMCore::setPumpMaxVolume(const char* deviceLabel, double volUl) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->setMaxVolumeUl(volUl);
@@ -6398,8 +6420,8 @@ void CMMCore::setPumpMaxVolume(const char* deviceLabel, double volUl) throw (CMM
 */
 double CMMCore::getPumpMaxVolume(const char* deviceLabel) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     double volUl = 0;
@@ -6418,8 +6440,8 @@ double CMMCore::getPumpMaxVolume(const char* deviceLabel) throw (CMMError)
 */
 void CMMCore::setPumpFlowrate(const char* deviceLabel, double UlperSec) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->setFlowrateUlPerSec(UlperSec);
@@ -6436,8 +6458,8 @@ void CMMCore::setPumpFlowrate(const char* deviceLabel, double UlperSec) throw (C
 */
 double CMMCore::getPumpFlowrate(const char* deviceLabel) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     double UlperSec = 0;
@@ -6455,13 +6477,13 @@ double CMMCore::getPumpFlowrate(const char* deviceLabel) throw (CMMError)
 * Start dispensing at the set flowrate until syringe is empty, or manually
 * stopped (whichever occurs first).
 */
-void CMMCore::PumpDispense(const char* deviceLabel) throw (CMMError)
+void CMMCore::PumpStart(const char* deviceLabel) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
-    int ret = pPump->Dispense();
+    int ret = pPump->Start();
 
     if (ret != DEVICE_OK)
     {
@@ -6475,8 +6497,8 @@ void CMMCore::PumpDispense(const char* deviceLabel) throw (CMMError)
 */
 void CMMCore::PumpDispenseDuration(const char* deviceLabel, double seconds) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->DispenseDuration(seconds);
@@ -6493,8 +6515,8 @@ void CMMCore::PumpDispenseDuration(const char* deviceLabel, double seconds) thro
 */
 void CMMCore::PumpDispenseVolume(const char* deviceLabel, double microLiter) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<VolumetricPumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<VolumetricPumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->DispenseVolume(microLiter);
@@ -6509,10 +6531,10 @@ void CMMCore::PumpDispenseVolume(const char* deviceLabel, double microLiter) thr
 /**
 * Calibrates the pump
 */
-void CMMCore::PumpCalibrate(const char* deviceLabel) throw (CMMError)
+void CMMCore::PressurePumpCalibrate(const char* deviceLabel) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->Calibrate();
@@ -6525,12 +6547,24 @@ void CMMCore::PumpCalibrate(const char* deviceLabel) throw (CMMError)
 }
 
 /**
+* Returns boolean whether the pump is operational before calibration
+*/
+bool CMMCore::PressurePumpRequiresCalibration(const char* deviceLabel) throw (CMMError)
+{
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
+    mm::DeviceModuleLockGuard guard(pPump);
+
+    return pPump->requiresCalibration();
+}
+
+/**
 * Sets the pressure of the pump in kPa
 */
 void CMMCore::setPumpPressure(const char* deviceLabel, double pressurekPa) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     int ret = pPump->setPressure(pressurekPa);
@@ -6547,8 +6581,8 @@ void CMMCore::setPumpPressure(const char* deviceLabel, double pressurekPa) throw
 */
 double CMMCore::getPumpPressure(const char* deviceLabel) throw (CMMError)
 {
-    std::shared_ptr<PumpInstance> pPump =
-        deviceManager_->GetDeviceOfType<PumpInstance>(deviceLabel);
+    std::shared_ptr<PressurePumpInstance> pPump =
+        deviceManager_->GetDeviceOfType<PressurePumpInstance>(deviceLabel);
     mm::DeviceModuleLockGuard guard(pPump);
 
     double pressurekPa = 0;

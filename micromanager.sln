@@ -490,6 +490,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DahengGalaxy", "DeviceAdapt
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Fluigent", "DeviceAdapters\Fluigent\Fluigent.vcxproj", "{4F22D447-EDC6-4766-A750-A5781276040A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WorldPrecisionInstruments", "DeviceAdapters\WorldPrecisionInstruments\WorldPrecisionInstruments.vcxproj", "{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DemoPumps", "DeviceAdapters\DemoPumps\DemoPumps.vcxproj", "{981FA711-08E2-409C-9E61-2766368A3D3D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -1472,6 +1476,14 @@ Global
 		{4F22D447-EDC6-4766-A750-A5781276040A}.Debug|x64.Build.0 = Debug|x64
 		{4F22D447-EDC6-4766-A750-A5781276040A}.Release|x64.ActiveCfg = Release|x64
 		{4F22D447-EDC6-4766-A750-A5781276040A}.Release|x64.Build.0 = Release|x64
+		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Debug|x64.ActiveCfg = Debug|x64
+		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Debug|x64.Build.0 = Debug|x64
+		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Release|x64.ActiveCfg = Release|x64
+		{DF373FEA-9FFA-43DC-9ECB-D1B90A29F238}.Release|x64.Build.0 = Release|x64
+		{981FA711-08E2-409C-9E61-2766368A3D3D}.Debug|x64.ActiveCfg = Debug|x64
+		{981FA711-08E2-409C-9E61-2766368A3D3D}.Debug|x64.Build.0 = Debug|x64
+		{981FA711-08E2-409C-9E61-2766368A3D3D}.Release|x64.ActiveCfg = Release|x64
+		{981FA711-08E2-409C-9E61-2766368A3D3D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

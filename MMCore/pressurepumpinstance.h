@@ -20,13 +20,14 @@
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 
 #pragma once
-
 #include "DeviceInstanceBase.h"
+#include "../../MMDevice/MMDeviceConstants.h"
 
-class PumpInstance : public DeviceInstanceBase<MM::Pump>
+
+class PressurePumpInstance : public DeviceInstanceBase<MM::PressurePump>
 {
 public:
-    PumpInstance(CMMCore* core,
+    PressurePumpInstance(CMMCore* core,
         std::shared_ptr<LoadedDeviceAdapter> adapter,
         const std::string& name,
         MM::Device* pDevice,
@@ -34,26 +35,13 @@ public:
         const std::string& label,
         mm::logging::Logger deviceLogger,
         mm::logging::Logger coreLogger) :
-        DeviceInstanceBase<MM::Pump>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
+        DeviceInstanceBase<MM::PressurePump>(core, adapter, name, pDevice, deleteFunction, label, deviceLogger, coreLogger)
     {}
 
-    // Volume controlled pump specific
-    int Home();
-    int Stop();
-    int invertDirection(bool state);
-    int isDirectionInverted(bool& state);
-    int setVolumeUl(double volUl);
-    int getVolumeUl(double& volUl);
-    int setMaxVolumeUl(double volUl);
-    int getMaxVolumeUl(double& volUl);
-    int setFlowrateUlPerSec(double flowrate);
-    int getFlowrateUlPerSec(double& flowrate);
-    int Dispense();
-    int DispenseDuration(double durSec);
-    int DispenseVolume(double volUl);
 
-    // Pressure controller specific
     int Calibrate();
+    int Stop();
+    bool requiresCalibration();
     int setPressure(double pressure);
     int getPressure(double& pressure);
 };

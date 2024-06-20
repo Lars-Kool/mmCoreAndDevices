@@ -1,9 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// FILE:          WorldPrecisionInstruments.h
+// FILE:          DemoSyringePump.cpp
 // PROJECT:       Micro-Manager
 // SUBSYSTEM:     DeviceAdapters
 //-----------------------------------------------------------------------------
-// DESCRIPTION:   Device adapter for WPI AL-XXX syringe pumps
+// DESCRIPTION:   Demo for syringe pump devices
 //                
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 //
@@ -22,19 +22,17 @@
 //                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
+//LAST UPDATE:    23.02.2024 LK
 
-#include "WorldPrecisionInstruments.h"
-
-#include "MMDevice.h"
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include "ModuleInterface.h"
-#include "DeviceUtils.h"
 #include <string>
 #include <map>
 #include <algorithm>
 #include <stdint.h>
 #include <future>
+#include "DemoPumps.h"
 
 using namespace std;
 
@@ -42,22 +40,9 @@ using namespace std;
 //  Global constants
 ///////////////////////////////////////////////////////////////////////////////
 
-const char* g_WPIHubName = "WPI Pump Hub";
-const char* g_WPIPumpName = "WPI Pump";
+const char* g_DemoPumpHubName = "DemoPumpHub";
+const char* g_DemoPumpName = "DemoPump";
 const char* NoHubError = "Parent Hub not defined.";
-const char* CR = "\r";
-const char* ETX = "\x03";
-const double pi = 3.14159265359;
-
-// All values are obtained from the data sheet https://www.wpi-europe.com/downloads/content/AL-4000_IM1.pdf
-const double g_Diameter_min = 0.1;
-const double g_Diameter_max = 50;
-const double g_Speed_min = 0.00002299; // mm/s, converted from 0.008276531 cm/hr
-const double g_Speed_max = 3.01339285; // mm/s, converted from 18.08035714 cm/min
-
-double calculate_flowrate(double speed, double diameter) {
-    return 0.25 * speed * pi * diameter * diameter;
-}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -67,7 +52,7 @@ double calculate_flowrate(double speed, double diameter) {
 
 MODULE_API void InitializeModuleData()
 {
-    RegisterDevice(g_WPIHubName, MM::HubDevice, "Hub for WPI pumps.");
+    RegisterDevice(g_DemoPumpHubName, MM::HubDevice, "Hub for demo pumps.");
 }
 
 MODULE_API MM::Device* CreateDevice(const char* deviceName)
@@ -76,14 +61,14 @@ MODULE_API MM::Device* CreateDevice(const char* deviceName)
     {
         return 0; // Trying to create nothing, return nothing
     }
-    else if (strcmp(deviceName, g_WPIHubName) == 0)
+    else if (strcmp(deviceName, g_DemoPumpHubName) == 0)
     {
-        return new WPIPumpHub(); // Create Hub
+        return new DemoPumpHub(); // Create Hub
     }
     // 8 is the length of the g_DemoPumpName name
-    else if (strcmp(((string)deviceName).substr(0, 8).c_str(), g_WPIPumpName) == 0)
+    else if (strcmp(((string)deviceName).substr(0, 8).c_str(), g_DemoPumpName) == 0)
     {
-        return new WPIPump(stoi(((string)deviceName).substr(8))); // Create pump
+        return new DemoPump(stoi(((string)deviceName).substr(8))); // Create pump
     }
     return 0; // If an unexpected name is provided, return nothing
 }
@@ -99,7 +84,7 @@ MODULE_API void DeleteDevice(MM::Device* device)
 // Hub for DemoPump devices
 ///////////////////////////////////////////////////////////////////////////////
 
-WPIPumpHub::WPIPumpHub() :
+DemoPumpHub::DemoPumpHub() :
     initialized_(false),
     busy_(false),
     nPumps_(0),
@@ -108,16 +93,16 @@ WPIPumpHub::WPIPumpHub() :
 {
     // Assign COM-port
     CPropertyAction* pAct;
-    pAct = new CPropertyAction(this, &WPIPumpHub::OnPort);
-    CreateStringProperty("Port", port_.c_str(), false, pAct, true);
+    pAct = new CPropertyAction(this, &DemoPumpHub::OnPort);
+    CreateStringProperty("Portal", port_.c_str(), false, pAct, true);
 
     // Assign number of pumps
-    pAct = new CPropertyAction(this, &WPIPumpHub::OnNPumps);
+    pAct = new CPropertyAction(this, &DemoPumpHub::OnNPumps);
     CreateIntegerProperty("Number of pumps", nPumps_, false, pAct, true);
 }
 
-WPIPumpHub::~WPIPumpHub() {
-    Shutdown();
+DemoPumpHub::~DemoPumpHub() {
+	Shutdown();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -125,15 +110,15 @@ WPIPumpHub::~WPIPumpHub() {
 // MMDevice API
 ///////////////////////////////////////////////////////////////////////////////
 
-int WPIPumpHub::Initialize()
+int DemoPumpHub::Initialize()
 {
     // Name
-    int ret = CreateStringProperty(MM::g_Keyword_Name, g_WPIHubName, true);
+    int ret = CreateStringProperty(MM::g_Keyword_Name, g_DemoPumpHubName, true);
     if (DEVICE_OK != ret)
         return ret;
 
     // Description
-    ret = CreateStringProperty(MM::g_Keyword_Description, "Hub for WPI pumps.", true);
+    ret = CreateStringProperty(MM::g_Keyword_Description, "Hub for Demo pumps", true);
     if (DEVICE_OK != ret)
         return ret;
 
@@ -145,7 +130,7 @@ int WPIPumpHub::Initialize()
     return DEVICE_OK;
 }
 
-int WPIPumpHub::Shutdown() {
+int DemoPumpHub::Shutdown() {
     if (!initialized_) {
         return DEVICE_OK;
     }
@@ -161,14 +146,14 @@ int WPIPumpHub::Shutdown() {
     return DEVICE_OK;
 }
 
-bool WPIPumpHub::Busy() {
+bool DemoPumpHub::Busy() {
     return busy_;
 }
 
-void WPIPumpHub::GetName(char* name) const
+void DemoPumpHub::GetName(char* name) const
 {
     // Return the name used to refer to this device adapter
-    CDeviceUtils::CopyLimitedString(name, g_WPIHubName);
+    CDeviceUtils::CopyLimitedString(name, g_DemoPumpHubName);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -182,7 +167,7 @@ void WPIPumpHub::GetName(char* name) const
 * specific pump. The implementation should be adapter to match the serial/API
 * requirements of your specific pump.
 */
-int WPIPumpHub::DetectInstalledDevices()
+int DemoPumpHub::DetectInstalledDevices()
 {
     ClearInstalledDevices();
 
@@ -193,11 +178,8 @@ int WPIPumpHub::DetectInstalledDevices()
     GetName(hubName); // Name of the hub
     for (int i = 0; i < nPumps_; i++)
     {
-        if (Ping(i) != DEVICE_OK) {
-            nPumps_ = i - 1;
-            break;
-        }
-        string deviceName = (string)g_WPIPumpName + to_string(i);
+        string deviceName = (string)g_DemoPumpName + to_string(i);
+        //RegisterDevice(deviceName.c_str(), MM::PumpDevice, "Demo Pump");
         MM::Device* pDev = CreateDevice(deviceName.c_str());
         AddInstalledDevice(pDev);
 
@@ -205,7 +187,7 @@ int WPIPumpHub::DetectInstalledDevices()
         pDev->GetName(temp);
         LogMessage("Created pump: " + (string)temp);
     }
-    return nPumps_ > 0 ? DEVICE_OK : DEVICE_ERR;
+    return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -213,7 +195,7 @@ int WPIPumpHub::DetectInstalledDevices()
 // Action handlers
 ///////////////////////////////////////////////////////////////////////////////
 
-int WPIPumpHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct) {
+int DemoPumpHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct) {
     switch (eAct) {
     case MM::BeforeGet:
         pProp->Set(port_.c_str());
@@ -225,7 +207,7 @@ int WPIPumpHub::OnPort(MM::PropertyBase* pProp, MM::ActionType eAct) {
     return DEVICE_OK;
 }
 
-int WPIPumpHub::OnBaudrate(MM::PropertyBase* pProp, MM::ActionType eAct) {
+int DemoPumpHub::OnBaudrate(MM::PropertyBase* pProp, MM::ActionType eAct) {
     string temp = "";
 
     switch (eAct) {
@@ -241,7 +223,7 @@ int WPIPumpHub::OnBaudrate(MM::PropertyBase* pProp, MM::ActionType eAct) {
     return DEVICE_OK;
 }
 
-int WPIPumpHub::OnNPumps(MM::PropertyBase* pProp, MM::ActionType eAct) {
+int DemoPumpHub::OnNPumps(MM::PropertyBase* pProp, MM::ActionType eAct) {
     string temp = "";
 
     switch (eAct) {
@@ -263,51 +245,36 @@ int WPIPumpHub::OnNPumps(MM::PropertyBase* pProp, MM::ActionType eAct) {
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
-* Pinging pump at address 0 (first pump in daisy chain), to check if any pump
-* is connected.
+* Here you should establish the connection to the COM port, and check whether
+* the provided COM-port is correct, e.g. by pinging the port with an expected
+* return. If the connection is successful, return DEVICE_OK. Else,
+* return DEVICE_SERIAL_COMMAND_FAILED.
+* 
+* Logging a message on success or failure is encouraged.
 */
-int WPIPumpHub::ConnectToPort() {
-    int ret = Ping(0);
-    return ret;
+int DemoPumpHub::ConnectToPort() {
+    LogMessage("Hub connected successfully to port: " + port_ + " with baudrate: " + to_string(baudrate_));
+    return DEVICE_OK;
 }
 
-int WPIPumpHub::GetPort(string& port) {
+int DemoPumpHub::GetPort(string& port) {
     port = port_;
     return DEVICE_OK;
 }
 
-int WPIPumpHub::GetBaudrate(int& baudrate) {
+int DemoPumpHub::GetBaudrate(int& baudrate) {
     baudrate = baudrate_;
     return DEVICE_OK;
 }
 
-/**
-* Request for the version number the pump at address "idx". If no pump is
-* available at that address, the response will start with '?', which can
-* be used to check whether the ping failed.
-*/
-int WPIPumpHub::Ping(int idx) {
-    string response = "";
-    SendSerialCommand(port_.c_str(), "0 VER", CR);
-    GetSerialAnswer(port_.c_str(), ETX, response);
-    if (response[0] == '?') {
-        LogMessage("Hub could not connect to port: " + port_ +
-            " with baudrate: " + to_string(baudrate_) +
-            " at address: " + to_string(idx));
-        return DEVICE_SERIAL_COMMAND_FAILED;
-    }
-    LogMessage("Hub connected successfully to port: " + port_ +
-        " with baudrate: " + to_string(baudrate_) +
-        " at address: " + to_string(idx));
-    return DEVICE_OK;
-}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // DemoPump class
 // A demo pump
 ///////////////////////////////////////////////////////////////////////////////
 
-WPIPump::WPIPump(int idx) :
+DemoPump::DemoPump(int idx) :
     initialized_(false),
     busy_(false),
     port_("Undefined"),
@@ -321,15 +288,14 @@ WPIPump::WPIPump(int idx) :
 {
     // Set pump id and name
     id_ = idx;
-    name_ = ((string)g_WPIPumpName) + to_string(id_);
+    name_ = ((string)g_DemoPumpName) + to_string(id_);
     thd_ = new PumpThread(this);
 
     // parent ID display
     //CreateHubIDProperty();
 }
 
-WPIPump::~WPIPump() {
-    free(thd_);
+DemoPump::~DemoPump() {
     Shutdown();
 };
 
@@ -338,12 +304,12 @@ WPIPump::~WPIPump() {
 // MMDevice API
 ///////////////////////////////////////////////////////////////////////////////
 
-int WPIPump::Initialize() {
+int DemoPump::Initialize() {
     if (initialized_)
         return DEVICE_OK;
 
     // Link to parent Hub
-    WPIPumpHub* pHub = static_cast<WPIPumpHub*>(GetParentHub());
+    DemoPumpHub* pHub = static_cast<DemoPumpHub*>(GetParentHub());
     if (pHub)
     {
         char hubLabel[MM::MaxStrLength];
@@ -359,7 +325,7 @@ int WPIPump::Initialize() {
         return ret;
 
     // Description
-    ret = CreateStringProperty(MM::g_Keyword_Description, "Alladin syringe pump", true);
+    ret = CreateStringProperty(MM::g_Keyword_Description, "Demo syringe pump", true);
     if (DEVICE_OK != ret)
         return ret;
 
@@ -369,34 +335,35 @@ int WPIPump::Initialize() {
     // Set communication parameters (obtained from Hub)
     CPropertyAction* pAct;
 
+    // Set minVolume
+    pAct = new CPropertyAction(this, &DemoPump::OnMinVolume);
+    ret = CreateFloatProperty("Min Volume uL", minVolumeUl_, false, pAct);
+
     // Set maxVolume
-    pAct = new CPropertyAction(this, &WPIPump::OnMaxVolume);
+    pAct = new CPropertyAction(this, &DemoPump::OnMaxVolume);
     ret = CreateFloatProperty("Max Volume uL", maxVolumeUl_, false, pAct);
 
     // Set currentVolume
-    pAct = new CPropertyAction(this, &WPIPump::OnCurrentVolume);
+    pAct = new CPropertyAction(this, &DemoPump::OnCurrentVolume);
     ret = CreateFloatProperty("Current Volume uL", volumeUl_, false, pAct);
 
     // Set diameter
-    pAct = new CPropertyAction(this, &WPIPump::OnDiameter);
+    pAct = new CPropertyAction(this, &DemoPump::OnDiameter);
     ret = CreateFloatProperty("Diameter mm", diameter_, false, pAct);
-    SetPropertyLimits("Diameter mm", g_Diameter_min, g_Diameter_max);
+
+    // Set stepSize
+    pAct = new CPropertyAction(this, &DemoPump::OnStepSize);
+    ret = CreateFloatProperty("Step size mm", stepSize_, false, pAct);
 
     // Set direction
     vector<string> allowedDirections = { "1", "-1" };
-    pAct = new CPropertyAction(this, &WPIPump::OnDirection);
+    pAct = new CPropertyAction(this, &DemoPump::OnDirection);
     ret = CreateIntegerProperty("Direction", direction_, false, pAct);
     SetAllowedValues("Direction", allowedDirections);
 
     // Set flowrate
-    pAct = new CPropertyAction(this, &WPIPump::OnFlowrate);
-    ret = CreateFloatProperty("Flow rate uL/sec", flowrateUlperSecond_, false, pAct);
-
-    // Start dispense
-    vector<string> allowedRunValues = { "1", "0" };
-    pAct = new CPropertyAction(this, &WPIPump::OnRun);
-    ret = CreateIntegerProperty("Run", run_, false, pAct);
-    SetAllowedValues("Run", allowedRunValues);
+    pAct = new CPropertyAction(this, &DemoPump::OnFlowrate);
+    ret = CreateFloatProperty("Flow rate uL/min", flowrateUlperSecond_, false, pAct);
 
     // Ping specific pump to check whether connection is established
     ret = CheckConnection();
@@ -405,12 +372,12 @@ int WPIPump::Initialize() {
     return DEVICE_OK;
 }
 
-int WPIPump::Shutdown() {
+int DemoPump::Shutdown() {
     if (!initialized_) {
         return DEVICE_OK;
     }
 
-    if (IsPumping()) {
+    if (Busy()) {
         Stop();
     }
 
@@ -418,29 +385,30 @@ int WPIPump::Shutdown() {
     return DEVICE_OK;
 }
 
-bool WPIPump::Busy() {
-    return false;
+bool DemoPump::Busy() {
+    busy_ = !thd_->IsStopped();
+    return busy_;
 }
 
-void WPIPump::GetName(char* name) const {
+
+
+void DemoPump::GetName(char* name) const {
     // Return the name used to refer to this device adapter
     CDeviceUtils::CopyLimitedString(name, name_.c_str());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// WPIPump class
+// DemoPump class
 // MMPump API
 ///////////////////////////////////////////////////////////////////////////////
 
-int WPIPump::GetPort(string& port) {
+int DemoPump::GetPort(string& port) {
     port = port_;
     return DEVICE_OK;
 }
 
-// Alladin pumps don't support an obvious way to home the pump, besides
-// crashing the pump and catching the error...
-int WPIPump::Home() {
-    if (IsPumping()) {
+int DemoPump::Home() {
+    if (Busy()) {
         return DEVICE_PUMP_IS_RUNNING;
     }
 
@@ -449,39 +417,36 @@ int WPIPump::Home() {
     return DEVICE_OK;
 }
 
-int WPIPump::Stop() {
+int DemoPump::Stop() {
     // If pump is not running, no need to stop it.
-    if (!IsPumping())
+    if (!Busy()) {
         return DEVICE_OK;
+    }
 
     thd_->Stop();
-
-    Send(to_string(id_) + " STP");
+    busy_ = thd_->IsStopped();
     return DEVICE_OK;
 }
 
-int WPIPump::GetMaxVolumeUl(double& volUl) {
+int DemoPump::GetMaxVolumeUl(double& volUl) {
     volUl = maxVolumeUl_;
     return DEVICE_OK;
 }
 
-int WPIPump::SetMaxVolumeUl(double volUl) {
-    if (IsPumping())
-        return DEVICE_PUMP_IS_RUNNING;
-
+int DemoPump::SetMaxVolumeUl(double volUl) {
     maxVolumeUl_ = volUl;
     SetPropertyLimits("Current Volume uL", minVolumeUl_, maxVolumeUl_);
     return DEVICE_OK;
 }
 
-int WPIPump::GetVolumeUl(double& volUl) {
+int DemoPump::GetVolumeUl(double& volUl) {
     MMThreadGuard g(this->currentVolumeLock_);
     volUl = volumeUl_;
     return DEVICE_OK;
 }
 
-int WPIPump::SetVolumeUl(double volUl) {
-    if (IsPumping())
+int DemoPump::SetVolumeUl(double volUl) {
+    if (Busy())
         return DEVICE_PUMP_IS_RUNNING;
 
     MMThreadGuard g(this->currentVolumeLock_);
@@ -489,89 +454,71 @@ int WPIPump::SetVolumeUl(double volUl) {
     return DEVICE_OK;
 }
 
-int WPIPump::IsDirectionInverted(bool& invert) {
-    invert = (direction_ == -1);
+int DemoPump::IsDirectionInverted(bool& invert) {
+    invert = direction_;
     return DEVICE_OK;
 }
 
-int WPIPump::InvertDirection(bool invert) {
-    if (IsPumping())
+int DemoPump::InvertDirection(bool invert) {
+    if (Busy())
         return DEVICE_PUMP_IS_RUNNING;
-    direction_ = (invert) ? -1 : 1;
+    direction_ = invert;
     return DEVICE_OK;
 }
 
-int WPIPump::GetDiameter(double& diam) {
+int DemoPump::GetDiameter(double& diam) {
     diam = diameter_;
     return DEVICE_OK;
 }
 
-int WPIPump::SetDiameter(double diam) {
-    if (IsPumping())
+int DemoPump::SetDiameter(double diam) {
+    if (Busy())
         return DEVICE_PUMP_IS_RUNNING;
-    if (diam < g_Diameter_min || diam > g_Diameter_max)
-        return DEVICE_INVALID_PROPERTY_VALUE;
-
-    stringstream msg;
-    msg << to_string(id_) + " DIA " << setprecision(4) << diam;
-    int ret = Send(msg.str());
-
-    if (ret == DEVICE_OK)
-        diameter_ = diam;
-
-    return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
+    diameter_ = diam;
+    return DEVICE_OK;
 }
 
-int WPIPump::GetFlowrateUlPerSecond(double& flowrate) {
+int DemoPump::GetStepSize(double& stepSize) {
+    stepSize = stepSize_;
+    return DEVICE_OK;
+}
+
+int DemoPump::SetStepSize(double stepSize) {
+    if (Busy())
+        return DEVICE_PUMP_IS_RUNNING;
+    stepSize_ = stepSize;
+    return DEVICE_OK;
+}
+
+int DemoPump::GetFlowrateUlPerSecond(double& flowrate) {
     flowrate = flowrateUlperSecond_;
     return DEVICE_OK;
 }
 
-int WPIPump::SetFlowrateUlPerSecond(double flowrate) {
-    if (IsPumping())
+int DemoPump::SetFlowrateUlPerSecond(double flowrate) {
+    if (Busy())
         return DEVICE_PUMP_IS_RUNNING;
-
-    if (abs(flowrate) < calculate_flowrate(g_Speed_min, diameter_) ||
-        abs(flowrate) > calculate_flowrate(g_Speed_max, diameter_))
-        return DEVICE_INVALID_PROPERTY_VALUE;
-
-    if (flowrate * direction_ < 0 &&
-        flowrateUlperSecond_ * direction_ >= 0)
-        Send(to_string(id_) + " DIR WDR");
-    else if (flowrate * direction_ >= 0 &&
-        flowrateUlperSecond_ * direction_ < 0)
-        Send(to_string(id_) + " DIR INF");
-
-    AdjustUnits(abs(flowrate));
-
-    stringstream msg;
-    msg << to_string(id_) + " RAT C ";
-    msg << setprecision(4) << ConvertFlowrate(abs(flowrate), flowrate_unit_);
-    msg << GetUnitString();
-    int ret = Send(msg.str());
-    if (ret == DEVICE_OK)
-        flowrateUlperSecond_ = flowrate;
-    return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
+    flowrateUlperSecond_ = flowrate;
+    return DEVICE_OK;
 }
 
-int WPIPump::Dispense() {
-    if (IsPumping())
+int DemoPump::Dispense() {
+    if (Busy())
         return DEVICE_PUMP_IS_RUNNING;
 
-    MMThreadGuard g(this->currentVolumeLock_);
     double seconds = 0;
-    if (flowrateUlperSecond_ >= 0)
+    if (flowrateUlperSecond_ >= 0) {
         seconds = volumeUl_ / flowrateUlperSecond_;
-    else
+    }
+    else {
         seconds = (maxVolumeUl_ - volumeUl_) / abs(flowrateUlperSecond_);
-    g.~MMThreadGuard(); // ThreadGuard needs to be destroyed, as it might be called before it goes out of scope
-
+    }
     DispenseDuration(seconds);
     return DEVICE_OK;
 }
 
-int WPIPump::DispenseVolume(double volUl) {
-    if (IsPumping())
+int DemoPump::DispenseVolume(double volUl) {
+    if (Busy())
         return DEVICE_PUMP_IS_RUNNING;
 
     // Calculate duration based on volume and flowrate
@@ -584,37 +531,19 @@ int WPIPump::DispenseVolume(double volUl) {
     return DEVICE_OK;
 }
 
-int WPIPump::DispenseDuration(double seconds) {
-    if (IsPumping())
+int DemoPump::DispenseDuration(double seconds) {
+    if (Busy())
         return DEVICE_PUMP_IS_RUNNING;
 
-    double volToBeDispensed = abs(seconds * flowrateUlperSecond_);
-    if (volToBeDispensed > 1000)
-        Send(to_string(id_) + " VOL ML");
-    else
-        Send(to_string(id_) + " VOL UL");
-
-
-    stringstream msg;
-    msg << to_string(id_) + " VOL ";
-    if (volToBeDispensed > 1000)
-        msg << setprecision(4) << volToBeDispensed / 1000;
-    else
-        msg << setprecision(4) << volToBeDispensed;
-
-    Send(msg.str());
-
     MMThreadGuard g(this->currentVolumeLock_);
-    startVolume_ = volumeUl_;
-    g.~MMThreadGuard();
 
-    duration_ = seconds;
+    startVolume_ = volumeUl_;
+    duration_ = seconds; // Convert seconds to milliseconds, since clock is in ms.
     if (duration_ < 0) {
         LogMessage("Negative dispense/withdraw duration. Check the sign of the flowrate and volume");
         return DEVICE_ERR;
     }
-    
-    Send(to_string(id_) + " RUN");
+    busy_ = true;
     thd_->Start(duration_);
     return DEVICE_OK;
 }
@@ -622,14 +551,20 @@ int WPIPump::DispenseDuration(double seconds) {
 /**
 * Actual updating in separate function to release the threadlocks asap.
 */
-int WPIPump::UpdateVolume(double dt) {
+int DemoPump::UpdateVolume(double dt) {
     MMThreadGuard g1(this->currentVolumeLock_);
+
+    // 1000 to convert dt (which is in ms) to second
     volumeUl_ = startVolume_ - flowrateUlperSecond_ * dt;
     return DEVICE_OK;
 }
 
-int WPIPump::RunOnThread(double dt) {
+int DemoPump::RunOnThread(double dt) {
+    // The updating executes very fast, potentially straining the CPU. Hence
+    // we limit the refresh rate to 100/s. This value is chosen relatively
+    // arbitrarily, so it could be updated in the future.
     UpdateVolume(dt);
+    CDeviceUtils::SleepMs(10);
     return DEVICE_OK;
 }
 
@@ -638,114 +573,132 @@ int WPIPump::RunOnThread(double dt) {
 // Action Handlers
 ///////////////////////////////////////////////////////////////////////////////
 
-int WPIPump::OnMaxVolume(MM::PropertyBase* pProp, MM::ActionType eAct) {
+int DemoPump::OnMinVolume(MM::PropertyBase* pProp, MM::ActionType eAct) {
+    switch (eAct) {
+    case MM::BeforeGet:
+        pProp->Set(minVolumeUl_);
+        break;
+    case MM::AfterSet:
+        if (Busy()) {
+            return DEVICE_PUMP_IS_RUNNING;
+        }
+        string temp;
+        pProp->Get(temp);
+        minVolumeUl_ = stod(temp);
+        SetPropertyLimits("Current Volume uL", minVolumeUl_, maxVolumeUl_);
+        break;
+    }
+    return DEVICE_OK;
+}
+
+int DemoPump::OnMaxVolume(MM::PropertyBase* pProp, MM::ActionType eAct) {
     switch (eAct) {
     case MM::BeforeGet:
         pProp->Set(maxVolumeUl_);
         break;
     case MM::AfterSet:
-        if (IsPumping()) {
+        if (Busy()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
         string temp;
         pProp->Get(temp);
-        SetMaxVolumeUl(stod(temp));
+        maxVolumeUl_ = stod(temp);
+        SetPropertyLimits("Current Volume uL", minVolumeUl_, maxVolumeUl_);
         break;
     }
     return DEVICE_OK;
 }
 
-int WPIPump::OnCurrentVolume(MM::PropertyBase* pProp, MM::ActionType eAct) {
+int DemoPump::OnCurrentVolume(MM::PropertyBase* pProp, MM::ActionType eAct) {
     MMThreadGuard g(this->currentVolumeLock_);
     switch (eAct) {
     case MM::BeforeGet:
-        if (volumeUl_ < minVolumeUl_ || volumeUl_ > maxVolumeUl_)
-            volumeUl_ = (volumeUl_ < minVolumeUl_) ? minVolumeUl_ : maxVolumeUl_;
         pProp->Set(volumeUl_);
         break;
     case MM::AfterSet:
-        if (IsPumping()) {
+        if (Busy()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
         string temp;
         pProp->Get(temp);
-        SetVolumeUl(stod(temp));
+        volumeUl_ = stod(temp);
         break;
     }
     return DEVICE_OK;
 }
 
-int WPIPump::OnDiameter(MM::PropertyBase* pProp, MM::ActionType eAct) {
+int DemoPump::OnDiameter(MM::PropertyBase* pProp, MM::ActionType eAct) {
     switch (eAct) {
     case MM::BeforeGet:
         pProp->Set(diameter_);
         break;
     case MM::AfterSet:
-        if (IsPumping()) {
+        if (Busy()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
         string temp;
         pProp->Get(temp);
-        SetDiameter(stod(temp));
+        diameter_ = stod(temp);
         break;
     }
     return DEVICE_OK;
 }
 
-int WPIPump::OnDirection(MM::PropertyBase* pProp, MM::ActionType eAct) {
+int DemoPump::OnStepSize(MM::PropertyBase* pProp, MM::ActionType eAct) {
     switch (eAct) {
     case MM::BeforeGet:
-        pProp->Set((long)direction_);
+        pProp->Set(stepSize_);
         break;
     case MM::AfterSet:
-        if (IsPumping()) {
+        if (Busy()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
         string temp;
         pProp->Get(temp);
-        InvertDirection(temp == "-1");
+        stepSize_ = stod(temp);
         break;
     }
     return DEVICE_OK;
 }
 
-int WPIPump::OnFlowrate(MM::PropertyBase* pProp, MM::ActionType eAct) {
+int DemoPump::OnDirection(MM::PropertyBase* pProp, MM::ActionType eAct) {
+    switch (eAct) {
+    case MM::BeforeGet:
+        if (direction_) {
+            pProp->Set((long)-1);
+        }
+        break;
+    case MM::AfterSet:
+        if (Busy()) {
+            return DEVICE_PUMP_IS_RUNNING;
+        }
+        string temp;
+        pProp->Get(temp);
+        direction_ = temp == "-1";
+        break;
+    }
+    return DEVICE_OK;
+}
+
+int DemoPump::OnFlowrate(MM::PropertyBase* pProp, MM::ActionType eAct) {
     switch (eAct) {
     case MM::BeforeGet:
         pProp->Set(flowrateUlperSecond_);
         break;
     case MM::AfterSet:
-        if (IsPumping()) {
+        if (Busy()) {
             return DEVICE_PUMP_IS_RUNNING;
         }
-        LogMessage("Entered OnFlowrate");
         string temp;
         pProp->Get(temp);
-        SetFlowrateUlPerSecond(stod(temp));
-        break;
-    }
-    return DEVICE_OK;
-}
-
-int WPIPump::OnRun(MM::PropertyBase* pProp, MM::ActionType eAct) {
-    switch (eAct) {
-    case MM::BeforeGet:
-        pProp->Set(run_);
-        break;
-    case MM::AfterSet:
-        string temp;
-        pProp->Get(temp);
-        if (temp == "1")
-            Dispense();
-        else if (temp == "0")
-            Stop();
+        flowrateUlperSecond_ = stod(temp);
         break;
     }
     return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// WPIPump class
+// DemoPumpHub class
 // Utility methods
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -756,7 +709,7 @@ int WPIPump::OnRun(MM::PropertyBase* pProp, MM::ActionType eAct) {
 *
 * Logging a message on success or failure is encouraged.
 */
-int WPIPump::CheckConnection() {
+int DemoPump::CheckConnection() {
     // Send command with known response
     string response = Ping();
     // Check if response matches the expected value
@@ -775,86 +728,12 @@ int WPIPump::CheckConnection() {
 * just a dummy method. The return of the implementation doesn't matter, the
 * only requirement is that it should be known in advance, and change depending
 * on whether the pump is successfully connected or not.
-*
+* 
 * Options could include "get version" (either of device or firmware),
 * "is running".
 */
-string WPIPump::Ping() {
+string DemoPump::Ping() {
     return "Success";
-}
-
-int WPIPump::Send(string cmd) {
-    LogMessage("Sent command: " + cmd + " to pump");
-    int ret = SendSerialCommand(port_.c_str(), cmd.c_str(), CR);
-    return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
-}
-
-int WPIPump::ReceiveOneLine(string& ans) {
-    ans = "";
-    int ret = GetSerialAnswer(port_.c_str(), ETX, ans);
-    return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
-}
-
-int WPIPump::Purge() {
-    int ret = PurgeComPort(port_.c_str());
-    return (ret == DEVICE_OK) ? DEVICE_OK : DEVICE_SERIAL_COMMAND_FAILED;
-}
-
-int WPIPump::AdjustUnits(double flowrate) {
-    int temp_unit = flowrate_unit_;
-    double pump_value = ConvertFlowrate(flowrate, temp_unit);
-    while (pump_value < 1 || pump_value >= 10000) {
-        if (pump_value < 0.01) {
-            if (temp_unit == uL_hr)
-                break;
-            else
-                temp_unit++;
-        }
-        else
-            if (temp_unit == mL_min)
-                break;
-            else
-                temp_unit++;
-    }
-    flowrate_unit_ = temp_unit;
-    return DEVICE_OK;
-}
-
-double WPIPump::ConvertFlowrate(double flowrate, int flowrate_unit) {
-    double value_to_pump = flowrate;
-    switch (flowrate_unit) {
-    case mL_min:
-        value_to_pump *= 0.06;
-        break;
-    case mL_hr:
-        value_to_pump *= 3.6;
-        break;
-    case uL_min:
-        value_to_pump *= 60;
-        break;
-    case uL_hr:
-        value_to_pump *= 3600;
-        break;
-    }
-    return value_to_pump;
-}
-
-string WPIPump::GetUnitString() {
-    switch (flowrate_unit_) {
-    case mL_min:
-        return "MM";
-    case mL_hr:
-        return "MH";
-    case uL_min:
-        return "UM";
-    case uL_hr:
-        return "UH";
-    }
-    return "";
-}
-
-bool WPIPump::IsPumping() {
-    return !thd_->IsStopped();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -862,9 +741,8 @@ bool WPIPump::IsPumping() {
 // Thread to run pump (prevents blocking of main thread).
 ///////////////////////////////////////////////////////////////////////////////
 
-PumpThread::PumpThread(WPIPump* pPump) {
+PumpThread::PumpThread(DemoPump* pPump) {
     pump_ = pPump;
-    stop_ = true;
 };
 
 PumpThread::~PumpThread() {};
@@ -877,6 +755,7 @@ PumpThread::~PumpThread() {};
 void PumpThread::Start(double duration) {
     MMThreadGuard g(this->stopLock_);
     duration_ = duration;
+    startTime_ = pump_->GetCurrentMMTime();
     stop_ = false;
     pump_->LogMessage("Thread is started");
     activate();
@@ -898,24 +777,24 @@ bool PumpThread::IsStopped() {
 ///////////////////////////////////////////////////////////////////////////////
 
 int PumpThread::svc(void) throw() {
-    int ret = DEVICE_OK;
-    startTime_ = pump_->GetCurrentMMTime();
-    try {
-        MM::MMTime currentTime = pump_->GetCurrentMMTime();
-        while (DEVICE_OK == ret && !IsStopped() && dt_ <= duration_) {
-            CDeviceUtils::SleepMs(1); // Limit computational stress
-            dt_ = (pump_->GetCurrentMMTime() - startTime_).getMsec() / 1000; // Convert ms to seconds
+    int ret = DEVICE_ERR;
+    try
+    {
+        do
+        {
+            MM::MMTime currentTime = pump_->GetCurrentMMTime();
+            dt_ = (currentTime - startTime_).getMsec()/1000; // Convert ms to seconds
             ret = pump_->RunOnThread(dt_);
-        }
+        } while (DEVICE_OK == ret && !IsStopped() && dt_ < duration_);
         if (IsStopped())
             pump_->LogMessage("Pump stopped by the user.\n");
-        if (ret == DEVICE_OK) {
-            pump_->LogMessage("Dispense/withdrawal finished.\n");
+        if (dt_ >= duration_) {
+            pump_->LogMessage("Dispense/withdrawal finished.\n"); 
         }
     }
     catch (...) {
         pump_->LogMessage(g_Msg_EXCEPTION_IN_THREAD);
     }
-    Stop();
+    stop_ = true;
     return ret;
 }

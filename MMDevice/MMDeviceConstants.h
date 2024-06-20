@@ -224,7 +224,8 @@ namespace MM {
       SLMDevice,
       HubDevice,
       GalvoDevice,
-      PumpDevice
+      VolumetricPumpDevice,
+      PressurePumpDevice
    };
 
    enum PropertyType {

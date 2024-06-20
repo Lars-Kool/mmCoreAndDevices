@@ -24,8 +24,8 @@
 //
 //LAST UPDATE:    23.02.2024 LK
 
-#ifndef _WPI_PUMP_H_
-#define _WPI_PUMP_H_
+#ifndef _DEMO_SYRINGE_PUMP_H_
+#define _DEMO_SYRINGE_PUMP_H_
 
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
@@ -38,24 +38,17 @@
 
 using namespace std;
 
-enum flowrate_units {
-    mL_min,
-    mL_hr,
-    uL_min,
-    uL_hr
-};
-
 ///////////////////////////////////////////////////////////////////////////////
-// WPIPumpHub class
-// Hub for WPI pumps
+// DemoPumpHub class
+// Hub for Demo pumps
 ///////////////////////////////////////////////////////////////////////////////
 
-class WPIPumpHub : public HubBase<WPIPumpHub>
+class DemoPumpHub : public HubBase<DemoPumpHub>
 {
     //friend class DemoPump;
 public:
-    WPIPumpHub();
-    ~WPIPumpHub();
+    DemoPumpHub();
+    ~DemoPumpHub();
 
     // Device API
     int Initialize();
@@ -81,7 +74,6 @@ public:
 private:
     // Hub private utility methods
     int ConnectToPort();
-    int Ping(int idx);
 
     // Hub class variables
     bool initialized_;
@@ -95,20 +87,20 @@ private:
 // DemoPump class
 // A demo pump
 //////////////////////////////////////////////////////////////////////////////
-class WPIPump : public CPumpBase<WPIPump>
+class DemoPump : public CPumpBase<DemoPump>
 {
     friend class PumpThread;
 
 public:
-    WPIPump(int idx);
-    ~WPIPump();
+    DemoPump(int idx);
+    ~DemoPump();
 
     // MMDevice API
     int Initialize();
     int Shutdown();
     bool Busy();
     void GetName(char* name) const;
-
+    
     // MMPump API
     int GetPort(string& port);
     int Home();
@@ -121,6 +113,8 @@ public:
     int InvertDirection(bool invert);
     int GetDiameter(double& V);
     int SetDiameter(double V);
+    int GetStepSize(double& stepSize);
+    int SetStepSize(double stepSize);
     int GetFlowrateUlPerSecond(double& flowrate);
     int SetFlowrateUlPerSecond(double flowrate);
     int Dispense();
@@ -129,25 +123,19 @@ public:
 
     int RunOnThread(double dt);
     int UpdateVolume(double dt);
-
+    
     // Action Handlers
     int OnMaxVolume(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnMinVolume(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnCurrentVolume(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnDiameter(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnStepSize(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnDirection(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnFlowrate(MM::PropertyBase* pProp, MM::ActionType eAct);
-    int OnRun(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     // Utility methods
     int CheckConnection();
     string Ping();
-    int Send(string cmd);
-    int ReceiveOneLine(string& ans);
-    int Purge();
-    int AdjustUnits(double flowrate);
-    double ConvertFlowrate(double flowrate, int flowrate_unit);
-    string GetUnitString();
-    bool IsPumping();
 
 private:
     // Communication class variables
@@ -159,16 +147,13 @@ private:
     string name_;
 
     // Pump state class variables
-    double minVolumeUl_ = 0;
+    double minVolumeUl_;
     double maxVolumeUl_;
     double volumeUl_;
     double diameter_;
     double stepSize_;
     double flowrateUlperSecond_;
     long direction_;
-    long flowrate_unit_;
-    long run_;
-    
 
     // Pump thread related
     PumpThread* thd_;
@@ -182,7 +167,7 @@ private:
 class PumpThread : public MMDeviceThreadBase
 {
 public:
-    PumpThread(WPIPump* pPump);
+    PumpThread(DemoPump* pPump);
     ~PumpThread();
 
     void Start(double duration);
@@ -190,14 +175,14 @@ public:
     bool IsStopped();
 
 private:
-    WPIPump* pump_;
+    DemoPump* pump_;
     MMThreadLock stopLock_;
     bool stop_ = true;
-    double duration_ = 0;
-    double dt_ = 0;
+    double duration_;
+    double dt_;
     MM::MMTime startTime_;
 
     int svc(void) throw();
 };
 
-#endif //_WPI_PUMP_H_
+#endif //_DEMO_SYRINGE_PUMP_H_
