@@ -150,6 +150,7 @@ namespace MM {
    const char* const g_Keyword_Pressure_Measured = "Pressure Measured";
 
    // image annotations
+   const char* const g_Keyword_Metadata_CameraLabel = "Camera";
    const char* const g_Keyword_Meatdata_Exposure    = "Exposure-ms";
    const char* const g_Keyword_Metadata_Score       = "Score";
    const char* const g_Keyword_Metadata_ImageNumber = "ImageNumber";
