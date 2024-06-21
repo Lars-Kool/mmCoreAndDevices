@@ -2491,62 +2491,57 @@ class CPumpBase : public CDeviceBase<MM::Pump, U>
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int Stop()
+    int InvertDirection(bool /*state*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int InvertDirection(bool state)
+    int IsDirectionInverted(bool& /*state*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int IsDirectionInverted(bool& state)
+    int SetVolumeUl(double /*volume*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int SetVolumeUl(double volume)
+    int GetVolumeUl(double& /*volume*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int GetVolumeUl(double& volume)
+    int SetMaxVolumeUl(double /*volume*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int SetMaxVolumeUl(double volume)
+    int GetMaxVolumeUl(double& /*volume*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int GetMaxVolumeUl(double& volume)
+    int SetFlowrateUlPerSecond(double /*flowrate*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int SetFlowrateUlPerSecond(double flowrate)
+    int GetFlowrateUlPerSecond(double& /*flowrate*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int GetFlowrateUlPerSecond(double& flowrate)
+    int Start()
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int Dispense()
+    int DispenseDuration(double /*durSec*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int DispenseDuration(double durSec)
-    {
-        return DEVICE_UNSUPPORTED_COMMAND;
-    }
-
-    int DispenseVolume(double volUl)
+    int DispenseVolume(double /*volUl*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
@@ -2556,12 +2551,12 @@ class CPumpBase : public CDeviceBase<MM::Pump, U>
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int SetPressure(double pressure)
+    int SetPressure(double /*pressure*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
 
-    int GetPressure(double& pressure)
+    int GetPressure(double& /*pressure*/)
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }

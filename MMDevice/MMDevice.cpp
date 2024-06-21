@@ -47,6 +47,7 @@ const DeviceType Magnifier::Type = MagnifierDevice;
 const DeviceType SLM::Type = SLMDevice;
 const DeviceType Galvo::Type = GalvoDevice;
 const DeviceType Hub::Type = HubDevice;
-const DeviceType Pump::Type = PumpDevice;
+const DeviceType VolumetricPump::Type = VolumetricPumpDevice;
+const DeviceType PressurePump::Type = PressurePumpDevice;
 
 } // namespace MM

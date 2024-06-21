@@ -141,7 +141,10 @@
     <ClCompile Include="ThreadPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Devices\PumpInstance.cpp">
+    <ClCompile Include="Devices\VolumetricPumpInstance.cpp">
+      <Filter>Source Files\Devices</Filter>
+    </ClCompile>
+    <ClCompile Include="Devices\Pressurepumpinstance.cpp">
       <Filter>Source Files\Devices</Filter>
     </ClCompile>
   </ItemGroup>
@@ -308,7 +311,10 @@
     <ClInclude Include="ThreadPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Devices\PumpInstance.h">
+    <ClInclude Include="Devices\VolumetricPumpInstance.h">
+      <Filter>Header Files\Devices</Filter>
+    </ClInclude>
+    <ClInclude Include="Devices\Pressurepumpinstance.h">
       <Filter>Header Files\Devices</Filter>
     </ClInclude>
   </ItemGroup>

@@ -100,7 +100,8 @@ class AutoFocusInstance;
 class CameraInstance;
 class DeviceInstance;
 class GalvoInstance;
-class PumpInstance;
+class VolumetricPumpInstance;
+class PressurePumpInstance;
 class ImageProcessorInstance;
 class SLMInstance;
 class ShutterInstance;
@@ -278,7 +279,8 @@ public:
    std::string getImageProcessorDevice();
    std::string getSLMDevice();
    std::string getGalvoDevice();
-   std::string getPumpDevice();
+   std::string getPressurePumpDevice();
+   std::string getVolumetricPumpDevice();
    std::string getChannelGroup();
    void setCameraDevice(const char* cameraLabel) throw (CMMError);
    void setShutterDevice(const char* shutterLabel) throw (CMMError);
@@ -288,7 +290,8 @@ public:
    void setImageProcessorDevice(const char* procLabel) throw (CMMError);
    void setSLMDevice(const char* slmLabel) throw (CMMError);
    void setGalvoDevice(const char* galvoLabel) throw (CMMError);
-   void setPumpDevice(const char* pumpLabel) throw (CMMError);
+   void setVolumetricPumpDevice(const char* pumpLabel) throw (CMMError);
+   void setPressurePumpDevice(const char* pumpLabel) throw (CMMError);
    void setChannelGroup(const char* channelGroup) throw (CMMError);
    ///@}
 
@@ -580,13 +583,14 @@ public:
          std::vector<unsigned char*> imageSequence) throw (CMMError);
    ///@}
 
-   /** \name Pump control.
+   /** \name Volumetric Pump control.
    *
-   * Control of pump devices
+   * Control of volumetric pump devices
    */
    ///@{
-   void PumpHome(const char* pumpLabel) throw (CMMError);
-   void PumpStop(const char* pumpLabel) throw (CMMError);
+   void VolumetricPumpStop(const char* pumpLabel) throw (CMMError);
+   void VolumetricPumpHome(const char* pumpLabel) throw (CMMError);
+   bool VolumetricPumpRequiresHoming(const char* pumpLabel) throw (CMMError);
    void invertPumpDirection(const char* pumpLabel, bool invert) throw (CMMError);
    bool isPumpDirectionInverted(const char* pumpLabel) throw (CMMError);
    void setPumpVolume(const char* pumpLabel, double volume) throw (CMMError);
@@ -595,10 +599,19 @@ public:
    double getPumpMaxVolume(const char* pumpLabel) throw (CMMError);
    void setPumpFlowrate(const char* pumpLabel, double volume) throw (CMMError);
    double getPumpFlowrate(const char* pumpLabel) throw (CMMError);
-   void PumpDispense(const char* pumpLabel) throw (CMMError);
+   void PumpStart(const char* pumpLabel) throw (CMMError);
    void PumpDispenseDuration(const char* pumpLabel, double seconds) throw (CMMError);
    void PumpDispenseVolume(const char* pumpLabel, double microLiter) throw (CMMError);
-   void PumpCalibrate(const char* pumpLabel) throw (CMMError);
+   ///@}
+
+   /** \name PressurePump control.
+   *
+   * Control of pressure pump devices
+   */
+   ///@{
+   void PressurePumpStop(const char* pumpLabel) throw (CMMError);
+   void PressurePumpCalibrate(const char* pumpLabel) throw (CMMError);
+   bool PressurePumpRequiresCalibration(const char* pumpLabel) throw (CMMError);
    void setPumpPressure(const char* pumplabel, double pressure) throw (CMMError);
    double getPumpPressure(const char* pumplabel) throw (CMMError);
    ///@}
@@ -672,7 +685,8 @@ private:
    std::weak_ptr<AutoFocusInstance> currentAutofocusDevice_;
    std::weak_ptr<SLMInstance> currentSLMDevice_;
    std::weak_ptr<GalvoInstance> currentGalvoDevice_;
-   std::weak_ptr<PumpInstance> currentPumpDevice_;
+   std::weak_ptr<VolumetricPumpInstance> currentVolumetricPumpDevice_;
+   std::weak_ptr<PressurePumpInstance> currentPressurePumpDevice_;
    std::weak_ptr<ImageProcessorInstance> currentImageProcessor_;
 
    std::string channelGroup_;
