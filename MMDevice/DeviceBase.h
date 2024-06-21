@@ -2484,7 +2484,7 @@ private:
 * Base class for creating pump device adapters.
 */
 template <class U>
-class CPumpBase : public CDeviceBase<MM::Pump, U>
+class CVolumetricPumpBase : public CDeviceBase<MM::VolumetricPump, U>
 {
     int Home()
     {
@@ -2545,7 +2545,14 @@ class CPumpBase : public CDeviceBase<MM::Pump, U>
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
+};
 
+/**
+* Base class for creating pump device adapters.
+*/
+template <class U>
+class CPressurePumpBase : public CDeviceBase<MM::PressurePump, U>
+{
     int Calibrate()
     {
         return DEVICE_UNSUPPORTED_COMMAND;
@@ -2560,7 +2567,7 @@ class CPumpBase : public CDeviceBase<MM::Pump, U>
     {
         return DEVICE_UNSUPPORTED_COMMAND;
     }
-};
+}
 
 
 // _t, a macro for timing single lines.
