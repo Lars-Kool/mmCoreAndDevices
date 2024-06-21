@@ -7,7 +7,7 @@
 //                
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 //
-// YEAR:          2023
+// YEAR:          2024
 //                
 // VERSION:       1.0
 //
@@ -22,14 +22,13 @@
 //                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    18.10.2023 LK
+//LAST UPDATE:    21.06.2024 LK
 
 #include "DeviceBase.h"
 #include "DeviceThreads.h"
 #include "ModuleInterface.h"
 #include <string>
 #include <map>
-#include <algorithm>
 #include <stdint.h>
 #include <future>
 
@@ -187,7 +186,7 @@ int FluigentHub::DetectInstalledDevices()
     // Automatically add all discovered pumps
     ClearInstalledDevices();
     for (int i = 0; i < nChannels_; i++) {
-        MM::Pump* pPump = new FluigentChannel(i);
+        MM::PressurePump* pPump = new FluigentChannel(i);
         if (pPump)
             AddInstalledDevice(pPump);
     }
@@ -299,6 +298,12 @@ int FluigentChannel::Initialize()
     pAct = new CPropertyAction(this, &FluigentChannel::OnMeasuredPressure);
     ret = CreateFloatProperty("Measured Pressure", 0, true, pAct);
     return ret;
+}
+
+int FluigentChannel::Stop() {
+    SetPressure(0);
+    Pimp_ = 0;
+    return DEVICE_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

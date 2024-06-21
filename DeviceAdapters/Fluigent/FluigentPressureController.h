@@ -7,9 +7,9 @@
 //                
 // AUTHOR:        Lars Kool, Institut Pierre-Gilles de Gennes
 //
-// YEAR:          2023
+// YEAR:          2024
 //                
-// VERSION:       0.1
+// VERSION:       1.0
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -22,7 +22,7 @@
 //                CONTRIBUTORS BE   LIABLE FOR ANY DIRECT, INDIRECT,
 //                INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES.
 //
-//LAST UPDATE:    18.10.2023 LK
+//LAST UPDATE:    21.06.2024 LK
 
 #ifndef _FLUIGENT_PRESSURE_CONTROLLER_H_
 #define _FLUIGENT_PRESSURE_CONTROLLER_H_
@@ -32,7 +32,6 @@
 #include "ModuleInterface.h"
 #include <string>
 #include <map>
-#include <algorithm>
 #include <stdint.h>
 #include <future>
 
@@ -154,7 +153,7 @@ private:
 // Fluigent Pressure Controller Channel
 ///////////////////////////////////////////////////////////////////////////////
 
-class FluigentChannel : public CPumpBase<FluigentChannel>
+class FluigentChannel : public CPressurePumpBase<FluigentChannel>
 {
 public:
     FluigentChannel(int idx);
@@ -175,7 +174,7 @@ public:
     int Initialize();
 
     /**
-    * Not needed, shutdown is handled by the Hub
+    * No need to further implement anything, shutdown is handled by the Hub
     * Required by the MM::Device API.
     * 
     * @returns MMDeviceConstants ErrorCode
@@ -204,7 +203,24 @@ public:
     ///////////////////////////////////////////////////////////////////////////
 
     /**
+    * Needs to stop pressure, i.e. set pressure to 0
+    * Required by the MM::PressurePump API
+    *
+    * @returns MMDeviceConstants ErrorCode
+    */
+    int Stop();
+
+    /**
+    * Needs to stop pressure, i.e. set pressure to 0
+    * Required by the MM::PressurePump API
+    *
+    * @returns boolean
+    */
+    bool RequiresCalibration() { return false; }
+
+    /**
     * Get-function for the pressure of a specific pressure channel
+    * Optional function of the MM::PressurePump API
     * 
     * @param[out] P - Measured pressure of that channel in kPa
     * @returns MMDeviceConstants ErrorCode
@@ -213,6 +229,7 @@ public:
 
     /**
     * Set-function for the pressure of a specific channel
+    * Optional function of the MM::PressurePump API
     *
     * @param[in] P - Pressure to be set in kPa
     * @returns MMDeviceConstants ErrorCode
@@ -221,6 +238,7 @@ public:
 
     /**
     * Get-function for the limits of a specific channel
+    * Optional function of the MM::PressurePump API
     * 
     * @param[out] Pmin - Minimum pressure of that channel
     * @param[out] Pmax - Maximum pressure of that channel
@@ -230,6 +248,7 @@ public:
 
     /**
     * Execute internal calibration on a specific channel
+    * Optional function of the MM::PressurePump API
     * 
     * @returns MMDeviceConstants ErrorCode
     */

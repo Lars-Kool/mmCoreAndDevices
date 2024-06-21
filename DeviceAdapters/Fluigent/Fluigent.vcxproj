@@ -76,6 +76,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>C:\Users\Lars\Documents\GitHub\IDS_peak_adapter\micro-manager\mmCoreAndDevices\TestDeviceAdapters\Fluigent;C:\Users\Lars\Documents\GitHub\fgt-SDK\Shared\windows\x64;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp\dlls;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp\dlls\windows\x64;C:\Users\Lars\Documents\GitHub\IDS_peak_adapter\micro-manager\mmCoreAndDevices\DeviceAdapters\DemoCamera;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>26812;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -94,6 +95,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>C:\Users\Lars\Documents\GitHub\IDS_peak_adapter\micro-manager\mmCoreAndDevices\TestDeviceAdapters\Fluigent;C:\Users\Lars\Documents\GitHub\fgt-SDK\Shared\windows\x64;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp\dlls;C:\Users\Lars\Documents\GitHub\fgt-SDK\C++\fgt_SDK_Cpp\dlls\windows\x64;C:\Users\Lars\Documents\GitHub\IDS_peak_adapter\micro-manager\mmCoreAndDevices\DeviceAdapters\DemoCamera;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>26812;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

@@ -40,7 +40,7 @@
 #include <stdint.h>
 #include <future>
 
-#include <ids_peak_comfort_c/ids_peak_comfort_c.h>
+#include <ids_peak_comfort_c\ids_peak_comfort_c.h>
 
 using namespace std;
 
