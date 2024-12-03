@@ -13,7 +13,7 @@
 //
 // YEAR:          2023
 //                
-// VERSION:       1.1
+// VERSION:       1.1.1
 //
 // LICENSE:       This file is distributed under the BSD license.
 //                License text is included with the source distribution.
@@ -2319,12 +2319,6 @@ int CIDSPeak::framerateSet(double framerate)
         return ERR_NO_WRITE_ACCESS;
     }
     return DEVICE_OK;
-}
-
-// Actual initialization of the camera (is called every time camera is swapped).
-int CIDSPeak::cameraChanged()
-{
-
 }
 
 // Checks if camera supportes color image formats

@@ -175,7 +175,6 @@ public:
 
     // action interface
     // ----------------
-    int OnChangeCamera(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnModelName(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnSerialNumber(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnMaxExposure(MM::PropertyBase* pProp, MM::ActionType eAct);
