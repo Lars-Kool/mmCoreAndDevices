@@ -195,6 +195,7 @@ public:
     int OnGainRed(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnGainGreen(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnGainBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnPeakPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
 
     long GetCCDXSize() { return cameraCCDXSize_; }
     long GetCCDYSize() { return cameraCCDYSize_; }
@@ -273,6 +274,9 @@ private:
     double gainMin_;
     double gainMax_;
     double gainInc_;
+
+    std::vector<std::string> availablePixelFormats;
+    peak_pixel_format currPixelFormat;
 
 
     bool stopOnOverflow_;
