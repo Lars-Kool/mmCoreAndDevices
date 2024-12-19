@@ -211,8 +211,6 @@ public:
     int transferBuffer(peak_frame_handle hFrame, ImgBuffer& img);
     int updateAutoWhiteBalance();
     int framerateSet(double framerate);
-    int cameraChanged();
-    bool isColorCamera();
 
 
 private:

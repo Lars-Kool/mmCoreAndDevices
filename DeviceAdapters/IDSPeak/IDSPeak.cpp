@@ -276,6 +276,7 @@ int IDSPeakHub::Initialize()
     if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; }
     
     status = peak_CameraList_Get(NULL, &nCameras_); // get length of camera list
+    LogMessage("Number of IDS cameras found: " + to_string(nCameras_));
     if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; } // exit program if no camera was found
 
     initialized_ = true;
@@ -448,6 +449,7 @@ int CIDSPeak::Initialize()
     status = peak_Camera_Open(cameraList[deviceIdx_].cameraID, &hCam); // Get the camera handle
     if (status != PEAK_STATUS_SUCCESS) { return ERR_CAMERA_NOT_FOUND; } // exit if this is unsuccessful
     free(cameraList); // free the camera list, not needed any longer
+    LogMessage("Camera " + to_string(deviceIdx_) + " opened successfully");
     
     // check which camera was actually opened
     peak_camera_descriptor cameraInfo;
@@ -486,7 +488,7 @@ int CIDSPeak::Initialize()
     vector<string> pixelTypeValues;
     pixelTypeValues.push_back(g_PixelType_8bit);
     pixelTypeValues.push_back(g_PixelType_16bit);
-    if (isColorCamera()) { pixelTypeValues.push_back(g_PixelType_32bitRGBA); }
+    pixelTypeValues.push_back(g_PixelType_32bitRGBA);
 
     pAct = new CPropertyAction(this, &CIDSPeak::OnPixelType);
     nRet = CreateStringProperty(MM::g_Keyword_PixelType, g_PixelType_8bit, false, pAct);
@@ -509,6 +511,8 @@ int CIDSPeak::Initialize()
     nRet = CreateStringProperty(g_keyword_Peak_PixelFormat, pixelFormatToString(currPixelFormat).c_str(), false, pAct);
     nRet = ClearAllowedValues(g_keyword_Peak_PixelFormat);
     nRet = SetAllowedValues(g_keyword_Peak_PixelFormat, availablePixelFormats);
+
+    LogMessage("PixelFormat " + pixelFormatToString(currPixelFormat) + " was set as the default PixelFormat");
 
     // Exposure time
     nRet = CreateFloatProperty(MM::g_Keyword_Exposure, exposureCur_, false);
@@ -533,63 +537,83 @@ int CIDSPeak::Initialize()
     status = peak_FrameRate_Get(hCam, &framerateCur_);
 
     // Auto white balance
-    initializeAutoWBConversion();
-    status = peak_AutoWhiteBalance_Mode_Get(hCam, &peakAutoWhiteBalance_);
-    pAct = new CPropertyAction(this, &CIDSPeak::OnAutoWhiteBalance);
-    nRet = CreateStringProperty("Auto white balance", "Off", false, pAct);
-    assert(nRet == DEVICE_OK);
+    if (peak_AutoWhiteBalance_Mode_Set(hCam, PEAK_AUTO_FEATURE_MODE_OFF) == PEAK_STATUS_SUCCESS) {
+        initializeAutoWBConversion();
+        status = peak_AutoWhiteBalance_Mode_Get(hCam, &peakAutoWhiteBalance_);
+        pAct = new CPropertyAction(this, &CIDSPeak::OnAutoWhiteBalance);
+        nRet = CreateStringProperty("Auto white balance", "Off", false, pAct);
+        assert(nRet == DEVICE_OK);
 
-    vector<string> autoWhiteBalanceValues;
-    autoWhiteBalanceValues.push_back("Off");
-    autoWhiteBalanceValues.push_back("Once");
-    autoWhiteBalanceValues.push_back("Continuous");
+        vector<string> autoWhiteBalanceValues;
+        autoWhiteBalanceValues.push_back("Off");
+        autoWhiteBalanceValues.push_back("Once");
+        autoWhiteBalanceValues.push_back("Continuous");
 
-    nRet = SetAllowedValues("Auto white balance", autoWhiteBalanceValues);
-    if (nRet != DEVICE_OK)
-        return nRet;
+        nRet = SetAllowedValues("Auto white balance", autoWhiteBalanceValues);
+        if (nRet != DEVICE_OK)
+            return nRet;
 
-    // Gain master
-    status = peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &gainMin_, &gainMax_, &gainInc_);
+        LogMessage("Auto whitebalance is enabled");
+    }
+    else {
+        LogMessage("Auto whitebalance is disabled");
+    }
+    
     status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &gainMaster_);
-    pAct = new CPropertyAction(this, &CIDSPeak::OnGainMaster);
-    nRet = CreateFloatProperty("Gain Master", 1.0, false, pAct);
-    assert(nRet == DEVICE_OK);
-    nRet = SetPropertyLimits("Gain Master", gainMin_, gainMax_);
-    if (nRet != DEVICE_OK)
-        return nRet;
+    if (gainMaster_ != 0.0) {
+        // Gain master
+        status = peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &gainMin_, &gainMax_, &gainInc_);
+        status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &gainMaster_);
+        pAct = new CPropertyAction(this, &CIDSPeak::OnGainMaster);
+        nRet = CreateFloatProperty("Gain Master", 1.0, false, pAct);
+        assert(nRet == DEVICE_OK);
+        nRet = SetPropertyLimits("Gain Master", gainMin_, gainMax_);
+        if (nRet != DEVICE_OK)
+            return nRet;
 
-    // Gain Red (should be set after gain master)
-    status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_RED, &gainRed_);
-    pAct = new CPropertyAction(this, &CIDSPeak::OnGainRed);
-    nRet = CreateFloatProperty("Gain Red", gainRed_, false, pAct);
-    assert(nRet == DEVICE_OK);
-    nRet = SetPropertyLimits("Gain Red", gainMin_, gainMax_);
-    if (nRet != DEVICE_OK)
-        return nRet;
+        // Gain Red (should be set after gain master)
+        status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_RED, &gainRed_);
+        pAct = new CPropertyAction(this, &CIDSPeak::OnGainRed);
+        nRet = CreateFloatProperty("Gain Red", gainRed_, false, pAct);
+        assert(nRet == DEVICE_OK);
+        nRet = SetPropertyLimits("Gain Red", gainMin_, gainMax_);
+        if (nRet != DEVICE_OK)
+            return nRet;
 
-    // Gain Green (should be set after gain master)
-    status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_GREEN, &gainGreen_);
-    pAct = new CPropertyAction(this, &CIDSPeak::OnGainGreen);
-    nRet = CreateFloatProperty("Gain Green", gainGreen_, false, pAct);
-    assert(nRet == DEVICE_OK);
-    nRet = SetPropertyLimits("Gain Green", gainMin_, gainMax_);
-    if (nRet != DEVICE_OK)
-        return nRet;
+        // Gain Green (should be set after gain master)
+        status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_GREEN, &gainGreen_);
+        pAct = new CPropertyAction(this, &CIDSPeak::OnGainGreen);
+        nRet = CreateFloatProperty("Gain Green", gainGreen_, false, pAct);
+        assert(nRet == DEVICE_OK);
+        nRet = SetPropertyLimits("Gain Green", gainMin_, gainMax_);
+        if (nRet != DEVICE_OK)
+            return nRet;
 
-    //Gain Blue (should be called after gain master)
-    status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_BLUE, &gainBlue_);
-    pAct = new CPropertyAction(this, &CIDSPeak::OnGainBlue);
-    nRet = CreateFloatProperty("Gain Blue", gainBlue_, false, pAct);
-    assert(nRet == DEVICE_OK);
-    nRet = SetPropertyLimits("Gain Blue", gainMin_, gainMax_);
-    if (nRet != DEVICE_OK)
-        return nRet;
+        //Gain Blue (should be called after gain master)
+        status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_BLUE, &gainBlue_);
+        pAct = new CPropertyAction(this, &CIDSPeak::OnGainBlue);
+        nRet = CreateFloatProperty("Gain Blue", gainBlue_, false, pAct);
+        assert(nRet == DEVICE_OK);
+        nRet = SetPropertyLimits("Gain Blue", gainMin_, gainMax_);
+        if (nRet != DEVICE_OK)
+            return nRet;
+
+        LogMessage("Digital gain is enabled");
+    }
+    else {
+        LogMessage("Digital gain is disabled");
+    }
 
     // camera temperature ReadOnly, and request camera temperature
-    pAct = new CPropertyAction(this, &CIDSPeak::OnCCDTemp);
-    nRet = CreateFloatProperty("CCDTemperature", 0, true, pAct);
-    assert(nRet == DEVICE_OK);
-
+    status = getTemperature(&ccdT_);
+    if (status == PEAK_STATUS_SUCCESS) {
+        pAct = new CPropertyAction(this, &CIDSPeak::OnCCDTemp);
+        nRet = CreateFloatProperty("CCDTemperature", 0, true, pAct);
+        assert(nRet == DEVICE_OK);
+        LogMessage("Temperature monitoring is enabled");
+    }
+    LogMessage("Temperature monitoring is disabled");
+    
     // readout time
     pAct = new CPropertyAction(this, &CIDSPeak::OnReadoutTime);
     nRet = CreateFloatProperty(MM::g_Keyword_ReadoutTime, 0, false, pAct);
@@ -2032,6 +2056,7 @@ peak_status CIDSPeak::getTemperature(double* sensorTemp)
     else
     {
         printf("No read access to device temperature");
+        status = PEAK_STATUS_ACCESS_DENIED;
     }
     return status;
 }
@@ -2319,19 +2344,4 @@ int CIDSPeak::framerateSet(double framerate)
         return ERR_NO_WRITE_ACCESS;
     }
     return DEVICE_OK;
-}
-
-// Checks if camera supportes color image formats
-bool CIDSPeak::isColorCamera()
-{
-    size_t pixelFormatCount = 0;
-    status = peak_PixelFormat_GetList(hCam, NULL, &pixelFormatCount);
-    peak_pixel_format* pixelFormatList = (peak_pixel_format*)calloc(
-        pixelFormatCount, sizeof(peak_pixel_format));
-    status = peak_PixelFormat_GetList(hCam, pixelFormatList, &pixelFormatCount);
-    for (int i = 0; i < pixelFormatCount; i++)
-    {
-        if (pixelFormatList[i] == PEAK_PIXEL_FORMAT_BAYER_RG8) { return true; }
-    }
-    return false;
 }
