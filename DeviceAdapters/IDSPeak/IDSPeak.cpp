@@ -375,8 +375,22 @@ CIDSPeak::CIDSPeak(int idx) :
     thd_ = new MySequenceThread(this);
     deviceIdx_ = idx;
 
+    
     // parent ID display
     CreateHubIDProperty();
+    
+    vector<string> booleans = { "true", "false" };
+    // Enable/disable temp sensor 
+    CreateStringProperty("Enable temperature sensor", "false", false,
+         new CPropertyAction(this, &CIDSPeak::OnEnableTemp),
+         true);
+    SetAllowedValues("Enable temperature sensor", booleans);
+
+    // Enable/disable digital gain
+    CreateStringProperty("Enable digital gain", "false", false,
+         new CPropertyAction(this, &CIDSPeak::OnEnableGain),
+         true);
+    SetAllowedValues("Enable digital gain", booleans);
 }
 
 /**
@@ -537,7 +551,7 @@ int CIDSPeak::Initialize()
     status = peak_FrameRate_Get(hCam, &framerateCur_);
 
     // Auto white balance
-    if (peak_AutoWhiteBalance_Mode_Set(hCam, PEAK_AUTO_FEATURE_MODE_OFF) == PEAK_STATUS_SUCCESS) {
+    if (enableGain_) {
         initializeAutoWBConversion();
         status = peak_AutoWhiteBalance_Mode_Get(hCam, &peakAutoWhiteBalance_);
         pAct = new CPropertyAction(this, &CIDSPeak::OnAutoWhiteBalance);
@@ -559,8 +573,7 @@ int CIDSPeak::Initialize()
         LogMessage("Auto whitebalance is disabled");
     }
     
-    status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &gainMaster_);
-    if (gainMaster_ != 0.0) {
+    if (enableGain_) {
         // Gain master
         status = peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &gainMin_, &gainMax_, &gainInc_);
         status = peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &gainMaster_);
@@ -605,8 +618,7 @@ int CIDSPeak::Initialize()
     }
 
     // camera temperature ReadOnly, and request camera temperature
-    status = getTemperature(&ccdT_);
-    if (status == PEAK_STATUS_SUCCESS) {
+    if (enableTemp_) {
         pAct = new CPropertyAction(this, &CIDSPeak::OnCCDTemp);
         nRet = CreateFloatProperty("CCDTemperature", 0, true, pAct);
         assert(nRet == DEVICE_OK);
@@ -2009,6 +2021,38 @@ int CIDSPeak::OnIsSequenceable(MM::PropertyBase* pProp, MM::ActionType eAct)
         {
             isSequenceable_ = true;
         }
+    }
+
+    return DEVICE_OK;
+}
+
+int CIDSPeak::OnEnableGain(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+       pProp->Set(enableGain_ ? "true" : "false");
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        string val = "true";
+        pProp->Get(val);
+        enableGain_ = (val == "true");
+    }
+
+    return DEVICE_OK;
+}
+
+int CIDSPeak::OnEnableTemp(MM::PropertyBase* pProp, MM::ActionType eAct)
+{
+    if (eAct == MM::BeforeGet)
+    {
+       pProp->Set(enableTemp_ ? "true" : "false");
+    }
+    else if (eAct == MM::AfterSet)
+    {
+        string val = "true";
+        pProp->Get(val);
+        enableTemp_ = (val == "true");
     }
 
     return DEVICE_OK;

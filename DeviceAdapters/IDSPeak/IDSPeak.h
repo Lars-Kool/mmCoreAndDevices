@@ -196,6 +196,9 @@ public:
     int OnGainBlue(MM::PropertyBase* pProp, MM::ActionType eAct);
     int OnPeakPixelFormat(MM::PropertyBase* pProp, MM::ActionType eAct);
 
+    int OnEnableGain(MM::PropertyBase* pProp, MM::ActionType eAct);
+    int OnEnableTemp(MM::PropertyBase* pProp, MM::ActionType eAct);
+
     long GetCCDXSize() { return cameraCCDXSize_; }
     long GetCCDYSize() { return cameraCCDYSize_; }
 
@@ -271,6 +274,9 @@ private:
     double gainMin_;
     double gainMax_;
     double gainInc_;
+    bool enableGain_;
+
+    bool enableTemp_;
 
     std::vector<std::string> availablePixelFormats;
     peak_pixel_format currPixelFormat;
