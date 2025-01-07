@@ -133,6 +133,26 @@ string pixelFormatToString(peak_pixel_format pixelFormat) {
             return "RGB10P32";
         case PEAK_PIXEL_FORMAT_BGR10P32:
             return "BGR10P32";
+        case PEAK_PIXEL_FORMAT_BAYER_GR10G40_IDS:
+            return "BAYER_GR10G40_IDS";
+        case PEAK_PIXEL_FORMAT_BAYER_RG10G40_IDS:
+            return "BAYER_RG10G40_IDS";
+        case PEAK_PIXEL_FORMAT_BAYER_GB10G40_IDS:
+            return "BAYER_GB10G40_IDS";
+        case PEAK_PIXEL_FORMAT_BAYER_BG10G40_IDS:
+            return "BAYER_BG10G40_IDS";
+        case PEAK_PIXEL_FORMAT_BAYER_GR12G24_IDS:
+            return "BAYER_GR12G24_IDS";
+        case PEAK_PIXEL_FORMAT_BAYER_RG12G24_IDS:
+            return "BAYER_RG12G24_IDS";
+        case PEAK_PIXEL_FORMAT_BAYER_GB12G24_IDS:
+            return "BAYER_GB12G24_IDS";
+        case PEAK_PIXEL_FORMAT_BAYER_BG12G24_IDS:
+            return "BAYER_BG12G24_IDS";
+        case PEAK_PIXEL_FORMAT_MONO10G40_IDS:
+            return "MONO10G40_IDS";
+        case PEAK_PIXEL_FORMAT_MONO12G24_IDS:
+            return "MONO12G24_IDS";
         default:
             return "";
     }
@@ -176,7 +196,17 @@ unordered_map<string, peak_pixel_format> stringPixelFormat = {
     { "MONO10P", PEAK_PIXEL_FORMAT_MONO10P },
     { "MONO12P", PEAK_PIXEL_FORMAT_MONO12P },
     { "RGB10P32", PEAK_PIXEL_FORMAT_RGB10P32 },
-    { "BGR10P32", PEAK_PIXEL_FORMAT_BGR10P32 }
+    { "BGR10P32", PEAK_PIXEL_FORMAT_BGR10P32 },
+    { "BAYER_GR10G40_IDS", PEAK_PIXEL_FORMAT_BAYER_GR10G40_IDS},
+    { "BAYER_RG10G40_IDS", PEAK_PIXEL_FORMAT_BAYER_RG10G40_IDS},
+    { "BAYER_GB10G40_IDS", PEAK_PIXEL_FORMAT_BAYER_GB10G40_IDS},
+    { "BAYER_BG10G40_IDS", PEAK_PIXEL_FORMAT_BAYER_BG10G40_IDS},
+    { "BAYER_GR12G24_IDS", PEAK_PIXEL_FORMAT_BAYER_GR12G24_IDS},
+    { "BAYER_RG12G24_IDS", PEAK_PIXEL_FORMAT_BAYER_RG12G24_IDS},
+    { "BAYER_GB12G24_IDS", PEAK_PIXEL_FORMAT_BAYER_GB12G24_IDS},
+    { "BAYER_BG12G24_IDS", PEAK_PIXEL_FORMAT_BAYER_BG12G24_IDS},
+    { "MONO10G40_IDS", PEAK_PIXEL_FORMAT_MONO10G40_IDS},
+    { "MONO12G24_IDS", PEAK_PIXEL_FORMAT_MONO12G24_IDS}
 };
 peak_pixel_format stringToPixelFormat(string PixelFormat) {
     return stringPixelFormat[PixelFormat];
@@ -508,6 +538,7 @@ int CIDSPeak::Initialize()
     nRet = CreateStringProperty(MM::g_Keyword_PixelType, g_PixelType_8bit, false, pAct);
     nRet = SetAllowedValues(MM::g_Keyword_PixelType, pixelTypeValues);
     pixelType_ = g_PixelType_8bit;
+    peak_IPL_PixelFormat_Set(hCam, PEAK_PIXEL_FORMAT_MONO8);
     if (nRet != DEVICE_OK)
         return nRet;
 
@@ -624,7 +655,9 @@ int CIDSPeak::Initialize()
         assert(nRet == DEVICE_OK);
         LogMessage("Temperature monitoring is enabled");
     }
-    LogMessage("Temperature monitoring is disabled");
+    else {
+        LogMessage("Temperature monitoring is disabled");
+    }
     
     // readout time
     pAct = new CPropertyAction(this, &CIDSPeak::OnReadoutTime);
@@ -747,6 +780,7 @@ int CIDSPeak::SnapImage()
     uint32_t three_frame_times_timeout_ms = (uint32_t)((3000.0 / framerateCur_) + 0.5);
 
     status = peak_Acquisition_Start(hCam, framesToAcquire);
+    if (status == PEAK_STATUS_ACCESS_DENIED) { return DEVICE_CAMERA_BUSY_ACQUIRING; }
     if (status != PEAK_STATUS_SUCCESS) { return ERR_ACQ_START; }
 
     while (pendingFrames > 0)
@@ -763,7 +797,7 @@ int CIDSPeak::SnapImage()
         else if (status != PEAK_STATUS_SUCCESS) { return ERR_ACQ_FRAME; }
 
         // At this point we successfully got a frame handle. We can deal with the info now!
-        nRet = transferBuffer(hFrame, img_);
+        nRet = transferBuffer(hFrame);
 
         // Now we have transfered all information, we can release the frame.
         status = peak_Frame_Release(hCam, hFrame);
@@ -1383,7 +1417,7 @@ int CIDSPeak::RunSequenceOnThread()
     else { nRet = DEVICE_OK; }
 
     // At this point we successfully got a frame handle. We can deal with the info now!
-    nRet = transferBuffer(hFrame, img_);
+    nRet = transferBuffer(hFrame);
     if (nRet != DEVICE_OK) { return DEVICE_ERR; }
     else { nRet = DEVICE_OK; }
 
@@ -1789,14 +1823,41 @@ int CIDSPeak::OnPixelType(MM::PropertyBase* pProp, MM::ActionType eAct)
         pProp->Get(pixelType);
 
         if (pixelType == g_PixelType_8bit) {
+            // Get buffer and convert it to 8bit mono
+            status = peak_IPL_PixelFormat_Set(hCam, PEAK_PIXEL_FORMAT_MONO8);
+            if (status != PEAK_STATUS_SUCCESS) {
+                LogMessage("IDS does not support the conversion of pixel format " +
+                    pixelFormatToString(currPixelFormat) +
+                    " to 8bit mono. Please select a different " +
+                    g_keyword_Peak_PixelFormat);
+                return DEVICE_CAN_NOT_SET_PROPERTY;
+            }
             nComponents_ = 1;
             bitDepth_ = 8;
         }
         else if (pixelType == g_PixelType_16bit) {
+            // Get buffer and convert it to 8bit mono
+            status = peak_IPL_PixelFormat_Set(hCam, PEAK_PIXEL_FORMAT_MONO12);
+            if (status != PEAK_STATUS_SUCCESS) {
+                LogMessage("IDS does not support the conversion of pixel format " +
+                    pixelFormatToString(currPixelFormat) +
+                    " to 16bit mono. Please select a different " +
+                    g_keyword_Peak_PixelFormat);
+                return DEVICE_CAN_NOT_SET_PROPERTY;
+            }
             nComponents_ = 1;
             bitDepth_ = 16;
         }
         else if (pixelType == g_PixelType_32bitRGBA) {
+            // Get buffer and convert it to 8bit mono
+            status = peak_IPL_PixelFormat_Set(hCam, PEAK_PIXEL_FORMAT_BGRA8);
+            if (status != PEAK_STATUS_SUCCESS) {
+                LogMessage("IDS does not support the conversion of pixel format " +
+                    pixelFormatToString(currPixelFormat) +
+                    " to 32bitRGBA mono. Please select a different " +
+                    g_keyword_Peak_PixelFormat);
+                return ERR_ACQ_FRAME;
+            }
             nComponents_ = 4;
             bitDepth_ = 8;
         }
@@ -2246,103 +2307,41 @@ void CIDSPeak::initializeAutoWBConversion()
     stringToPeakAuto.insert(pair<string, int>("Continuous", PEAK_AUTO_FEATURE_MODE_CONTINUOUS));
 }
 
-int CIDSPeak::transferBuffer(peak_frame_handle hFrame, ImgBuffer& img) {
-    peak_frame_handle hFrameConverted;
+int CIDSPeak::transferBuffer(peak_frame_handle hFrame) {
     peak_buffer peakBuffer;
-    unsigned char* pBuf = (unsigned char*) const_cast<unsigned char*>(img.GetPixels());
+    peak_frame_handle hConvertedFrame = peak_frame_handle();
 
-    LogMessage(pixelType_);
-    if (pixelType_ == g_PixelType_8bit) {
-        if (currPixelFormat == PEAK_PIXEL_FORMAT_MONO8) {
-            // Simply get framebuffer
-            status = peak_Frame_Buffer_Get(hFrame, &peakBuffer);
-            if (status != PEAK_STATUS_SUCCESS) { return ERR_ACQ_FRAME; }
+    LogMessage("In transfer buffer");
+    if ((pixelType_ == g_PixelType_8bit && currPixelFormat != PEAK_PIXEL_FORMAT_MONO8) ||
+        (pixelType_ == g_PixelType_16bit && currPixelFormat != PEAK_PIXEL_FORMAT_MONO10 && currPixelFormat != PEAK_PIXEL_FORMAT_MONO12) ||
+        (pixelType_ == g_PixelType_32bitRGBA && currPixelFormat != PEAK_PIXEL_FORMAT_BGRA8)) {
+        // No need to convert MONO8
+		LogMessage("Pixel format is not mono8.");
+		status = peak_IPL_ProcessFrame(hCam, hFrame, &hConvertedFrame);
+		if (status != PEAK_STATUS_SUCCESS) {
+			LogMessage("Something went wrong while converting the image to 8bit mono. It is best to select the " +
+				(string)g_keyword_Peak_PixelFormat +
+				pixelFormatToString(PEAK_PIXEL_FORMAT_MONO8) +
+				" to bypass the image conversion.");
+			return DEVICE_ERR;
+		}
+		LogMessage("Successful processed image");
+        status = peak_Frame_Buffer_Get(hConvertedFrame, &peakBuffer);
+        {
+            MMThreadGuard g(imgPixelsLock_);
+            unsigned char* pBuf = (unsigned char*) const_cast<unsigned char*>(img_.GetPixels());
+            memcpy(pBuf, peakBuffer.memoryAddress, peakBuffer.memorySize);
         }
-        else {
-            // Get buffer and convert it to 8bit mono
-            status = peak_IPL_PixelFormat_Set(hCam, PEAK_PIXEL_FORMAT_MONO8);
-            if (status != PEAK_STATUS_SUCCESS) {
-                LogMessage("IDS does not support the conversion of pixel format " +
-                    pixelFormatToString(currPixelFormat) +
-                    " to 8bit mono. Please select a different " +
-                    g_keyword_Peak_PixelFormat);
-                return ERR_ACQ_FRAME;
-            }
-            status = peak_IPL_ProcessFrame(hCam, hFrame, &hFrameConverted);
-            if (status != PEAK_STATUS_SUCCESS) {
-                LogMessage("Something went wrong while converting the image to 8bit mono. It is best to select the " +
-                    (string)g_keyword_Peak_PixelFormat +
-                    pixelFormatToString(PEAK_PIXEL_FORMAT_MONO8) +
-                    " to bypass the image conversion.");
-            }
-            status = peak_Frame_Buffer_Get(hFrameConverted, &peakBuffer);
-        }
-        // Copy 8bit mono buffer to imageBuffer
-        memcpy(pBuf, peakBuffer.memoryAddress, peakBuffer.memorySize);
+        peak_Frame_Release(hCam, hConvertedFrame);
     }
-    else if (pixelType_ == g_PixelType_16bit) {
-        // MONO10 and MONO12 are already 16 bit, so they don't need to be converted
-        if (currPixelFormat == PEAK_PIXEL_FORMAT_MONO10 ||
-            currPixelFormat == PEAK_PIXEL_FORMAT_MONO12) {
-            // Simply get framebuffer
-            status = peak_Frame_Buffer_Get(hFrame, &peakBuffer);
-            if (status != PEAK_STATUS_SUCCESS) { return ERR_ACQ_FRAME; }
+    else {
+        peak_Frame_Buffer_Get(hFrame, &peakBuffer);
+        {
+            MMThreadGuard g(imgPixelsLock_);
+            unsigned char* pBuf = (unsigned char*) const_cast<unsigned char*>(img_.GetPixels());
+            memcpy(pBuf, peakBuffer.memoryAddress, peakBuffer.memorySize);
         }
-        else {
-            // Get buffer and convert it to 8bit mono
-            status = peak_IPL_PixelFormat_Set(hCam, PEAK_PIXEL_FORMAT_MONO12);
-            if (status != PEAK_STATUS_SUCCESS) {
-                LogMessage("IDS does not support the conversion of pixel format " +
-                    pixelFormatToString(currPixelFormat) +
-                    " to 16bit mono. Please select a different " +
-                    g_keyword_Peak_PixelFormat);
-                return ERR_ACQ_FRAME;
-            }
-            status = peak_IPL_ProcessFrame(hCam, hFrame, &hFrameConverted);
-            if (status != PEAK_STATUS_SUCCESS) {
-                LogMessage("Something went wrong while converting the image to 16bit mono. It is best to select the " +
-                    (string)g_keyword_Peak_PixelFormat +
-                    pixelFormatToString(PEAK_PIXEL_FORMAT_MONO12) +
-                    " to bypass the image conversion.");
-            }
-            status = peak_Frame_Buffer_Get(hFrameConverted, &peakBuffer);
-        }
-        // Copy 16bit mono buffer to imageBufer
-        memcpy(pBuf, peakBuffer.memoryAddress, peakBuffer.memorySize);
     }
-    else if (pixelType_ == g_PixelType_32bitRGBA) {
-        // MONO10 and MONO12 are already 16 bit, so they don't need to be converted
-        if (currPixelFormat == PEAK_PIXEL_FORMAT_BGRA8) {
-            // Simply get framebuffer
-            status = peak_Frame_Buffer_Get(hFrame, &peakBuffer);
-            if (status != PEAK_STATUS_SUCCESS) { return ERR_ACQ_FRAME; }
-        }
-        else {
-            // Get buffer and convert it to 8bit mono
-            status = peak_IPL_PixelFormat_Set(hCam, PEAK_PIXEL_FORMAT_BGRA8);
-            if (status != PEAK_STATUS_SUCCESS) {
-                LogMessage("IDS does not support the conversion of pixel format " +
-                    pixelFormatToString(currPixelFormat) +
-                    " to 32bitRGBA mono. Please select a different " +
-                    g_keyword_Peak_PixelFormat);
-                return ERR_ACQ_FRAME;
-            }
-            status = peak_IPL_ProcessFrame(hCam, hFrame, &hFrameConverted);
-            if (status != PEAK_STATUS_SUCCESS) {
-                LogMessage("Something went wrong while converting the image to 32bitRGBA. It is best to select the " +
-                    (string)g_keyword_Peak_PixelFormat +
-                    pixelFormatToString(PEAK_PIXEL_FORMAT_BGRA8) +
-                    " to bypass the image conversion.");
-            }
-            status = peak_Frame_Buffer_Get(hFrameConverted, &peakBuffer);
-        }
-        // Copy 16bit mono buffer to imageBufer
-        memcpy(pBuf, peakBuffer.memoryAddress, peakBuffer.memorySize);
-    }
-
-    // Exit if something went wrong during the conversion/obtaining the buffer.
-    if (status != PEAK_STATUS_SUCCESS) { return DEVICE_UNSUPPORTED_DATA_FORMAT; }
-
     return DEVICE_OK;
 }
 

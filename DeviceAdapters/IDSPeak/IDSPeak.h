@@ -211,7 +211,7 @@ public:
     peak_status getGFAfloat(const char* featureName, double* floatValue);
     peak_status getTemperature(double* sensorTemp);
     void initializeAutoWBConversion();
-    int transferBuffer(peak_frame_handle hFrame, ImgBuffer& img);
+    int transferBuffer(peak_frame_handle hFrame);
     int updateAutoWhiteBalance();
     int framerateSet(double framerate);
 
@@ -275,7 +275,6 @@ private:
     double gainMax_;
     double gainInc_;
     bool enableGain_;
-
     bool enableTemp_;
 
     std::vector<std::string> availablePixelFormats;
