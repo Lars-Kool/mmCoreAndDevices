@@ -573,13 +573,13 @@ int CIDSPeak::Initialize()
     exposureCur_ /= 1000;
 
     // Frame rate
-    pAct = new CPropertyAction(this, &CIDSPeak::OnFrameRate);
-    nRet = CreateFloatProperty("MDA framerate", 1, false, pAct);
-    assert(nRet == DEVICE_OK);
     status = peak_FrameRate_GetRange(hCam, &framerateMin_, &framerateMax_, &framerateInc_);
+    status = peak_FrameRate_Get(hCam, &framerateCur_);
+    pAct = new CPropertyAction(this, &CIDSPeak::OnFrameRate);
+    nRet = CreateFloatProperty("MDA framerate", framerateCur_, false, pAct);
+    assert(nRet == DEVICE_OK);
     nRet = SetPropertyLimits("MDA framerate", framerateMin_, framerateMax_);
     assert(nRet == DEVICE_OK);
-    status = peak_FrameRate_Get(hCam, &framerateCur_);
 
     // Auto white balance
     if (enableGain_) {
@@ -775,7 +775,7 @@ int CIDSPeak::SnapImage()
 
     // Make SnapImage responsive, even if low framerate has been set
     double framerateTemp = framerateCur_;
-    nRet = framerateSet(1000 / exposureCur_);
+    nRet = framerateSet(framerateMax_);
 
     uint32_t three_frame_times_timeout_ms = (uint32_t)((3000.0 / framerateCur_) + 0.5);
 
@@ -1301,12 +1301,11 @@ int CIDSPeak::SetAllowedBinning()
 
 /**
  * Required by the MM::Camera API
- * Please implement this yourself and do not rely on the base class implementation
- * The Base class implementation is deprecated and will be removed shortly
+ * This method is called when "Live" is clicked.
  */
 int CIDSPeak::StartSequenceAcquisition(double interval)
 {
-    return StartSequenceAcquisition(LONG_MAX, interval, false);
+    return StartSequenceAcquisition(LONG_MAX, 1000 / framerateCur_, false);
 }
 
 /**
@@ -1336,7 +1335,7 @@ int CIDSPeak::StartSequenceAcquisition(long numImages, double interval_ms, bool 
     int nRet = DEVICE_OK;
 
     // Adjust framerate to match requested interval between frames
-    nRet = framerateSet(1000 / interval_ms);
+	interval_ms = exposureCur_;
 
     // Wait until shutter is ready
     nRet = GetCoreCallback()->PrepareForAcq(this);
@@ -2311,12 +2310,10 @@ int CIDSPeak::transferBuffer(peak_frame_handle hFrame) {
     peak_buffer peakBuffer;
     peak_frame_handle hConvertedFrame = peak_frame_handle();
 
-    LogMessage("In transfer buffer");
     if ((pixelType_ == g_PixelType_8bit && currPixelFormat != PEAK_PIXEL_FORMAT_MONO8) ||
         (pixelType_ == g_PixelType_16bit && currPixelFormat != PEAK_PIXEL_FORMAT_MONO10 && currPixelFormat != PEAK_PIXEL_FORMAT_MONO12) ||
         (pixelType_ == g_PixelType_32bitRGBA && currPixelFormat != PEAK_PIXEL_FORMAT_BGRA8)) {
         // No need to convert MONO8
-		LogMessage("Pixel format is not mono8.");
 		status = peak_IPL_ProcessFrame(hCam, hFrame, &hConvertedFrame);
 		if (status != PEAK_STATUS_SUCCESS) {
 			LogMessage("Something went wrong while converting the image to 8bit mono. It is best to select the " +
@@ -2325,7 +2322,6 @@ int CIDSPeak::transferBuffer(peak_frame_handle hFrame) {
 				" to bypass the image conversion.");
 			return DEVICE_ERR;
 		}
-		LogMessage("Successful processed image");
         status = peak_Frame_Buffer_Get(hConvertedFrame, &peakBuffer);
         {
             MMThreadGuard g(imgPixelsLock_);
@@ -2371,16 +2367,19 @@ int CIDSPeak::framerateSet(double framerate)
     if (framerate > framerateMax_)
     {
         framerate = framerateMax_;
+        LogMessage("Framerate exceeded maximum framerate. Framerate is set to maximum framerate");
     }
     else if (framerate < framerateMin_)
     {
         framerate = framerateMin_;
+        LogMessage("Framerate is lower than minimum framerate. Framerate is set to minimum framerate");
     }
 
     if (peak_FrameRate_GetAccessStatus(hCam) == PEAK_ACCESS_READWRITE)
     {
         status = peak_FrameRate_Set(hCam, framerate);
         framerateCur_ = framerate;
+        LogMessage("Framerate is set to: " + to_string(framerateCur_));
     }
     else
     {
