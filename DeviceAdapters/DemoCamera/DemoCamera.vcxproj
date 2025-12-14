@@ -94,16 +94,54 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DemoAutoFocus.cpp" />
     <ClCompile Include="DemoCamera.cpp" />
+    <ClCompile Include="DemoDA.cpp" />
+    <ClCompile Include="DemoFilterWheel.cpp" />
+    <ClCompile Include="DemoGalvo.cpp" />
+    <ClCompile Include="DemoHub.cpp" />
+    <ClCompile Include="DemoLightPath.cpp" />
+    <ClCompile Include="DemoMagnifier.cpp" />
+    <ClCompile Include="DemoObjectiveTurret.cpp" />
+    <ClCompile Include="DemoPressurePump.cpp" />
+    <ClCompile Include="DemoShutter.cpp" />
+    <ClCompile Include="DemoStateDevice.cpp" />
+    <ClCompile Include="DemoVolumetricPump.cpp" />
+    <ClCompile Include="DemoXYStage.cpp" />
+    <ClCompile Include="ImageFlipX.cpp" />
+    <ClCompile Include="ImageFlipY.cpp" />
+    <ClCompile Include="ImageMedianFilter.cpp" />
+    <ClCompile Include="ImageTranspose.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DemoAutoFocus.h" />
     <ClInclude Include="DemoCamera.h" />
+    <ClInclude Include="DemoDA.h" />
+    <ClInclude Include="DemoFilterWheel.h" />
+    <ClInclude Include="DemoGalvo.h" />
+    <ClInclude Include="DemoHub.h" />
+    <ClInclude Include="DemoLightPath.h" />
+    <ClInclude Include="DemoMagnifier.h" />
+    <ClInclude Include="DemoObjectiveTurret.h" />
+    <ClInclude Include="DemoPressurePump.h" />
+    <ClInclude Include="DemoShutter.h" />
+    <ClInclude Include="DemoStage.h" />
+    <ClInclude Include="DemoStateDevice.h" />
+    <ClInclude Include="DemoVolumetricPump.h" />
+    <ClInclude Include="DemoXYStage.h" />
+    <ClInclude Include="ImageFlipX.h" />
+    <ClInclude Include="ImageFlipY.h" />
+    <ClInclude Include="ImageMedianFilter.h" />
+    <ClInclude Include="ImageTranspose.h" />
     <ClInclude Include="WriteCompactTiffRGB.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\MMDevice\MMDevice-SharedRuntime.vcxproj">
       <Project>{b8c95f39-54bf-40a9-807b-598df2821d55}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DemoStage.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
